@@ -1,0 +1,10 @@
+# Ignore sensitive files
+.env
+
+# Ignore large media (if not needed in repo)
+*.jpg
+*.png
+
+# Python cache
+__pycache__/
+*.pyc

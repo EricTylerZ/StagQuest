@@ -1,0 +1,21 @@
+Talk at EthDenver at 1540MT on 2025-02-28
+Making an AI Agent with a wallet connected. connecting AI to crypto.
+
+Agentic commerce, whys it matter that an AI has a wallet?
+
+Ai chatting with AIs... that's likely to happen soon... its already happening.
+
+Agent to agent workers
+onramp, storage, send/receive, earn, offramp
+
+micro-transactions matter more for agentic commerce.... Where the emotional cost of paying for somehting of a person is far more costly. 
+https 402 status code for payments, micro-transaction, paymment required... future exercise to figure out how this works. 
+
+This makes sense that AIs will use to buy things with microtransactions since they dont have the same emotional cost to purchase things. 
+easy to integrate into node.js
+
+how can people prepare for onchain ai
+#1 agent-kit, voice is more used as user interface..
+#2 make it agent friendly, so that agents can easily get into things, etc. smart contracts publishable so ai agents can find . Instead of making it for humans, make it for AI tools
+#3 Make APIs and docs AI-accessible
+ Interesting. 
