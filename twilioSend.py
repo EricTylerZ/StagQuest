@@ -20,9 +20,14 @@ class TwilioSender:
             "Lauds": 6, "Prime": 7, "Terce": 9, "Sext": 12, "None": 15,
             "Vespers": 18, "Compline": 21
         }
+        now_utc = datetime.utcnow()
+        local_now = now_utc + offset
         for prayer, hour in prayer_times.items():
             local_send_time = datetime(day_date.year, day_date.month, day_date.day, hour, 0)
             utc_send_time = local_send_time - offset
+            # Ensure send_at is at least 5 minutes from now
+            if utc_send_time < now_utc + timedelta(seconds=300):
+                utc_send_time = now_utc + timedelta(seconds=300 + (day-1) * 86400 + hour * 3600)
             send_at = utc_send_time.isoformat() + "Z"
             msg = prompts[f"Day {day}"][prayer]
             message = self.client.messages.create(
@@ -35,9 +40,9 @@ class TwilioSender:
             print(f"Scheduled {prayer} for {send_at}: {message.sid}")
 
     def schedule_initial_days(self, user_id, phone, prompts, timezone_offset):
-        """Schedule Days 1-3 (Saturday, Sunday, Monday) in one run."""
+        """Schedule Days 1-3 (Saturday, Sunday, Monday) starting from now."""
         now_utc = datetime.utcnow()
         local_now = now_utc + timedelta(hours=timezone_offset)
-        start_date = local_now.date()  # Today (Saturday, March 1st)
+        start_date = local_now.date()
         for day in range(1, 4):  # Days 1-3
             self.schedule_day(user_id, phone, day, prompts, timezone_offset, start_date)
