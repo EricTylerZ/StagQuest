@@ -28,6 +28,17 @@ if user_id not in agent.users:
     print(f"User {user_id} onboarded!")
 else:
     print(f"Loading user {user_id}")
+    user = agent.users[user_id]
+    # Validate existing phone number
+    if not (user["phone"].startswith("+1") and len(user["phone"]) == 12 and user["phone"][1:].isdigit()):
+        print(f"Current phone {user['phone']} is invalid!")
+        while True:
+            phone = input("Enter a valid phone number (e.g., +13035551234): ")
+            if phone.startswith("+1") and len(phone) == 12 and phone[1:].isdigit():
+                user["phone"] = phone
+                agent.save_users()
+                break
+            print("Invalid US phone number! Use +1 followed by 10 digits")
 
 # Schedule initial three days' texts (Saturday, Sunday, Monday)
 with open("prompts.json") as f:
