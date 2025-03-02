@@ -8,3 +8,4 @@
 # Python cache
 __pycache__/
 *.pycusers.json 
+users.json 

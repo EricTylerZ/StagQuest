@@ -7,13 +7,15 @@ class TwilioSender:
     def __init__(self):
         self.client = Client(TWILIO_SID, TWILIO_TOKEN)
 
-    def schedule_day(self, user_id, phone, day, prompts, timezone_offset):
+    def schedule_day(self, user_id, phone, day, prompts, timezone_offset, start_date):
+        """
+        Schedule 7 daily prayer texts (Lauds-Compline) for a given day.
+        Catholic context: Novena is a 9-day prayer; Saturday and Monday are active,
+        Sunday texts are auto-sent by the computer for God-oriented reflection,
+        respecting Sabbath rest (Catechism 2184-2188).
+        """
         offset = timedelta(hours=timezone_offset)
-        now_utc = datetime.utcnow()
-        local_now = now_utc + offset
-        # Start scheduling from tomorrow morning
-        tomorrow = local_now.date() + timedelta(days=1)
-        day_date = tomorrow + timedelta(days=day-1)  # Day 1 = tomorrow
+        day_date = start_date + timedelta(days=day-1)
         prayer_times = {
             "Lauds": 6, "Prime": 7, "Terce": 9, "Sext": 12, "None": 15,
             "Vespers": 18, "Compline": 21
@@ -31,3 +33,11 @@ class TwilioSender:
                 send_at=send_at
             )
             print(f"Scheduled {prayer} for {send_at}: {message.sid}")
+
+    def schedule_initial_days(self, user_id, phone, prompts, timezone_offset):
+        """Schedule Days 1-3 (Saturday, Sunday, Monday) in one run."""
+        now_utc = datetime.utcnow()
+        local_now = now_utc + timedelta(hours=timezone_offset)
+        start_date = local_now.date()  # Today (Saturday, March 1st)
+        for day in range(1, 4):  # Days 1-3
+            self.schedule_day(user_id, phone, day, prompts, timezone_offset, start_date)
