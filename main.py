@@ -1,6 +1,7 @@
 # main.py
 from agent import StagAgent
 from twilioSend import TwilioSender
+from datetime import datetime, timedelta, timezone  # Added for utc
 import json
 
 agent = StagAgent()
@@ -40,18 +41,25 @@ else:
                 break
             print("Invalid US phone number! Use +1 followed by 10 digits")
 
-# Schedule initial three days' texts (Saturday, Sunday, Monday)
+# Schedule texts based on current day
 with open("prompts.json") as f:
     prompts = json.load(f)
 
 user = agent.users[user_id]
 day = user["day"]
 timezone_offset = user.get("timezone_offset", -7)  # Default to -7 if missing
+now_utc = datetime.now(timezone.utc)  # Define now_utc, modern way
+local_now = now_utc + timedelta(hours=timezone_offset)  # Define local_now
+start_date = local_now.date()  # Today as start_date
+
 if day > 9:
     print("Novena complete!")
+elif day == 1:
+    sender.schedule_day(user_id, user["phone"], day, prompts, timezone_offset, start_date)
+    print(f"Scheduled 7 texts for Day 1 (Saturday)!")
 elif day <= 3:
     sender.schedule_initial_days(user_id, user["phone"], prompts, timezone_offset)
     print(f"Scheduled 21 texts for Days 1-3 (Saturday, Sunday, Monday)!")
 else:
-    sender.schedule_day(user_id, user["phone"], day, prompts, timezone_offset)
+    sender.schedule_day(user_id, user["phone"], day, prompts, timezone_offset, start_date)
     print(f"Scheduled 7 texts for Day {day}!")
