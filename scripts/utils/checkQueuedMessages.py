@@ -8,13 +8,14 @@ from config import TWILIO_SID, TWILIO_TOKEN
 def check_queued_messages():
     """List all queued messages in Twilio account via API."""
     client = Client(TWILIO_SID, TWILIO_TOKEN)
-    messages = client.messages.list(status="queued")
-    if not messages:
+    messages = client.messages.list()  # Fetch all messages
+    queued_messages = [msg for msg in messages if msg.status == "queued"]
+    if not queued_messages:
         print("No queued messages found.")
         return
     
-    for msg in messages:
-        print(f"SID: {msg.sid}, To: {msg.to}, SendAt: {msg.send_at}, Status: {msg.status}, Body: {msg.body}")
+    for msg in queued_messages:
+        print(f"SID: {msg.sid}, To: {msg.to}, SendAt: {msg.date_sent or msg.send_at}, Status: {msg.status}, Body: {msg.body}")
 
 if __name__ == "__main__":
     check_queued_messages()
