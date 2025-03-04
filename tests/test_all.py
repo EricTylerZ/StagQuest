@@ -1,7 +1,7 @@
 # tests/test_all.py
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.agent import StagAgent
 from src.contract import get_nft_status, resolve_day
 from src.config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
@@ -9,7 +9,7 @@ import json
 
 agent = StagAgent()
 
-with open(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'prompts.json')) as f:
+with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'prompts.json')) as f:
     prompts = json.load(f)
 
 def batch_resolve_day():
@@ -19,6 +19,7 @@ def batch_resolve_day():
             resolve_day(token_id, True, OWNER_ADDRESS, OWNER_PRIVATE_KEY)
             user["day"] += 1
     agent.save_users()
+    print("Batch resolve completed.")
 
 def test_individual():
     print("\n=== Testing Individual NFT Holder ===")
@@ -132,7 +133,7 @@ def test_batch_resolve():
 def verify_files():
     print("\n=== Verifying Files ===")
     try:
-        with open(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'users.json'), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'users.json'), "r") as f:
             users = json.load(f)
         print(f"Users found: {list(users.keys())}")
     except Exception as e:
@@ -140,7 +141,7 @@ def verify_files():
         return False
     
     try:
-        with open(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'message_log.json'), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'message_log.json'), "r") as f:
             messages = json.load(f)
         print(f"Message entries: {len(messages)}")
     except Exception as e:

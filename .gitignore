@@ -7,6 +7,15 @@
 
 # Python cache
 __pycache__/
-*.pycusers.json 
-users.json 
-message_log.json
+*.pyc
+
+# Data files (generated or sensitive)
+data/users.json
+data/message_log.json
+
+# Documentation files (text files, etc.)
+docs/*.txt
+
+# Other common ignores (optional but recommended)
+*.log
+*.bak

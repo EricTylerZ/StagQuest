@@ -1,8 +1,12 @@
 # src/contract.py
 from src.config import w3, CONTRACT_ADDRESS
 import json
+import os
 
-with open("../data/abi.json") as f:
+# Absolute path to data directory
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
+with open(os.path.join(data_dir, 'abi.json')) as f:
     abi = json.load(f)
 
 contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)

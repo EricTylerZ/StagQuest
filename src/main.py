@@ -1,5 +1,8 @@
-# main.py
-from agent import StagAgent
+# src/main.py
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from src.agent import StagAgent
 from datetime import datetime
 import json
 
@@ -22,7 +25,7 @@ def manage_nfts(herdmaster_addr=None):
                 print(f"Onboarded {user_id}")
                 herd_nfts[user_id] = agent.users[user_id]
 
-    with open("prompts.json") as f:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'prompts.json')) as f:
         prompts = json.load(f)
 
     for user_id, user in herd_nfts.items():

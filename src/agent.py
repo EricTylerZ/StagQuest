@@ -2,17 +2,19 @@
 from src.config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 from src.contract import mint_nft, stake_nft, resolve_day, get_nft_status, get_tokens_by_owner
 import json
+import os
 from datetime import datetime
 
 class StagAgent:
     def __init__(self):
+        self.data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
         self.users = self.load_users()
         self.message_log = self.load_message_log()
         self.sync_with_contract()
 
     def load_users(self):
         try:
-            with open("../data/users.json") as f:
+            with open(os.path.join(self.data_dir, 'users.json')) as f:
                 return json.load(f)
         except FileNotFoundError:
             return {}
@@ -21,18 +23,21 @@ class StagAgent:
             return {}
 
     def save_users(self):
-        with open("../data/users.json", "w") as f:
+        with open(os.path.join(self.data_dir, 'users.json'), 'w') as f:
             json.dump(self.users, f, indent=4)
 
     def load_message_log(self):
         try:
-            with open("../data/message_log.json") as f:
+            with open(os.path.join(self.data_dir, 'message_log.json')) as f:
                 return json.load(f)
         except FileNotFoundError:
             return {}
+        except json.JSONDecodeError as e:
+            print(f"Error loading message_log.json: {e}")
+            return {}
 
     def save_message_log(self):
-        with open("../data/message_log.json", "w") as f:
+        with open(os.path.join(self.data_dir, 'message_log.json'), 'w') as f:
             json.dump(self.message_log, f, indent=4)
 
     def sync_with_contract(self):
