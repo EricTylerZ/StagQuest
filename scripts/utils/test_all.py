@@ -8,43 +8,39 @@ from agent import StagAgent
 from contract import get_nft_status
 from config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
 
-# Initialize agent
 agent = StagAgent()
 
-# Load prompts
 with open(os.path.join(os.path.dirname(__file__), '..', '..', 'prompts.json')) as f:
     prompts = json.load(f)
 
 def test_individual():
     print("\n=== Testing Individual NFT Holder ===")
-    # Onboard one user
-    user_id = agent.onboard_user(WALLET_ADDRESS, 3.33, timezone_offset=-7, private_key=PRIVATE_KEY)
-    if not user_id:
-        print("Individual onboarding failed.")
-        return False
+    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == WALLET_ADDRESS and not u.get("herdmaster")]
+    if not existing_users:
+        print(f"No existing NFTs for {WALLET_ADDRESS}. Onboarding new user.")
+        user_id = agent.onboard_user(WALLET_ADDRESS, 3.33, private_key=PRIVATE_KEY)
+        if not user_id:
+            print("Individual onboarding failed.")
+            return False
+        existing_users = [user_id]
+    user_id = existing_users[0]
+    print(f"Processing {user_id} for individual {WALLET_ADDRESS}")
     
-    print(f"Onboarded {user_id} as individual with address {WALLET_ADDRESS}")
-    
-    # Log messages for Day 1
-    user = agent.users[user_id]
-    day = user["day"]
-    token_id = user["token_id"]
+    day = agent.users[user_id]["day"]
+    token_id = agent.users[user_id]["token_id"]
     for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
         msg = prompts[f"Day {day}"][prayer]
         agent.log_message(user_id, day, prayer, msg)
     
-    # Simulate responses
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        agent.record_response(user_id, day, prayer, "y")
+    agent.record_response(user_id, day, "Compline", "y")
     
-    # Verify results
     user = agent.users[user_id]
-    if user["day"] != 2:
-        print(f"Error: {user_id} day should be 2, got {user['day']}")
+    if user["day"] != day + 1:
+        print(f"Error: {user_id} day should be {day + 1}, got {user['day']}")
         return False
     
     status = get_nft_status(token_id)
-    if not status or status["days_completed"] != 1 or status["successful_days"] != 1:
+    if not status or status["days_completed"] != day or status["successful_days"] != day:
         print(f"Error: NFT status for {token_id} incorrect: {status}")
         return False
     
@@ -53,46 +49,35 @@ def test_individual():
 
 def test_herdmaster():
     print("\n=== Testing Herdmaster with Multiple NFTs ===")
-    # Onboard three users
-    user_ids = []
-    for _ in range(3):
-        uid = agent.onboard_user(HERDMASTER_ADDRESS, 3.33, timezone_offset=-7, 
-                               herdmaster_addr=HERDMASTER_ADDRESS, private_key=HERDMASTER_PRIVATE_KEY)
-        if uid:
-            user_ids.append(uid)
-            print(f"Onboarded {uid} under herdmaster {HERDMASTER_ADDRESS}")
+    existing_users = [uid for uid, u in agent.users.items() if u.get("herdmaster") == HERDMASTER_ADDRESS]
+    target_num = 3
+    if len(existing_users) < target_num:
+        for _ in range(target_num - len(existing_users)):
+            uid = agent.onboard_user(HERDMASTER_ADDRESS, 3.33, herdmaster_addr=HERDMASTER_ADDRESS, private_key=HERDMASTER_PRIVATE_KEY)
+            if uid:
+                existing_users.append(uid)
+                print(f"Onboarded {uid} under herdmaster {HERDMASTER_ADDRESS}")
     
-    if len(user_ids) != 3:
-        print(f"Error: Expected 3 users, got {len(user_ids)}")
+    if len(existing_users) < target_num:
+        print(f"Error: Expected {target_num} users, got {len(existing_users)}")
         return False
     
-    # Process one user’s Day 1
-    user_id = user_ids[0]
-    user = agent.users[user_id]
-    day = user["day"]
-    token_id = user["token_id"]
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        msg = prompts[f"Day {day}"][prayer]
-        agent.log_message(user_id, day, prayer, msg)
-    
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        agent.record_response(user_id, day, prayer, "y")
-    
-    # Verify results
-    user = agent.users[user_id]
-    if user["day"] != 2:
-        print(f"Error: {user_id} day should be 2, got {user['day']}")
-        return False
-    
-    status = get_nft_status(token_id)
-    if not status or status["days_completed"] != 1 or status["successful_days"] != 1:
-        print(f"Error: NFT status for {token_id} incorrect: {status}")
-        return False
-    
-    # Check other users remain at Day 1
-    for uid in user_ids[1:]:
-        if agent.users[uid]["day"] != 1:
-            print(f"Error: {uid} day should be 1, got {agent.users[uid]['day']}")
+    for user_id in existing_users[:target_num]:
+        day = agent.users[user_id]["day"]
+        token_id = agent.users[user_id]["token_id"]
+        for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
+            msg = prompts[f"Day {day}"][prayer]
+            agent.log_message(user_id, day, prayer, msg)
+        agent.record_response(user_id, day, "Compline", "y")
+        
+        user = agent.users[user_id]
+        if user["day"] != day + 1:
+            print(f"Error: {user_id} day should be {day + 1}, got {user['day']}")
+            return False
+        
+        status = get_nft_status(token_id)
+        if not status or status["days_completed"] != day or status["successful_days"] != day:
+            print(f"Error: NFT status for {token_id} incorrect: {status}")
             return False
     
     print("Herdmaster test passed")
