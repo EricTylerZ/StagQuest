@@ -102,7 +102,7 @@ class StagAgent:
         self.save_users()
         return user_id
 
-    def log_message(self, user_id, day, prayer, msg):
+    def log_message(self, user_id, day, prayer, msg, silent=False):
         timestamp = datetime.now().isoformat()
         message_id = f"{user_id}|{day}|{prayer}"
         self.message_log[message_id] = {
@@ -111,7 +111,8 @@ class StagAgent:
             "responded": False
         }
         self.save_message_log()
-        print(f"Logged: {message_id} - {msg}")
+        if not silent:
+            print(f"Logged: {message_id} - {msg}")
 
     def record_response(self, user_id, day, prayer, response):
         message_id = f"{user_id}|{day}|{prayer}"
