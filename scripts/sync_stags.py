@@ -11,11 +11,9 @@ data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data')
 def get_mint_tx(token_id):
     """Fetch mint transaction hash for a token_id via Transfer event."""
     try:
-        # Load ABI directly (avoiding _get_contract dependency)
-        abi_path = os.path.join(os.path.dirname(__file__), '..', 'abi', 'stag-quest-abi.json')
-        with open(abi_path, 'r') as f:
-            abi = json.load(f)
-        contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)
+        # Use the contract instance from get_nft_status
+        status = get_nft_status(token_id)  # Ensure contract is initialized
+        contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=get_nft_status.__globals__['_get_contract']().abi)
         
         zero_address = "0x0000000000000000000000000000000000000000"
         events = contract.events.Transfer.get_logs(
@@ -49,7 +47,7 @@ def sync_stags():
                     "responses": {},
                     "fiat_paid": 3.33,
                     "timezone_offset": -7,
-                    "mint_tx": mint_tx  # Now populated
+                    "mint_tx": mint_tx
                 }
                 if addr == HERDMASTER_ADDRESS:
                     user_data["herdmaster"] = HERDMASTER_ADDRESS
