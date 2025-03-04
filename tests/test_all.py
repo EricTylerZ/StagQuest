@@ -134,4 +134,40 @@ def verify_files():
     print("\n=== Verifying Files ===")
     try:
         with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'users.json'), "r") as f:
-            users
+            users = json.load(f)
+    except Exception as e:
+        print(f"Error reading users.json: {e}")
+        return False
+    
+    try:
+        with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'message_log.json'), "r") as f:
+            messages = json.load(f)
+    except Exception as e:
+        print(f"Error reading message_log.json: {e}")
+        return False
+    
+    print(f"Users found: {list(users.keys())}")
+    print(f"Message entries: {len(messages)}")
+    return True
+
+def run_all_tests():
+    print("Running all tests...")
+    individual_passed = test_individual()
+    herdmaster_passed = test_herdmaster()
+    batch_passed = test_batch_resolve()
+    files_valid = verify_files()
+    
+    print("\n=== Test Summary ===")
+    print(f"Individual Test: {'Passed' if individual_passed else 'Failed'}")
+    print(f"Herdmaster Test: {'Passed' if herdmaster_passed else 'Failed'}")
+    print(f"Batch Resolve Test: {'Passed' if batch_passed else 'Failed'}")
+    print(f"File Verification: {'Passed' if files_valid else 'Failed'}")
+    
+    return individual_passed and herdmaster_passed and batch_passed and files_valid
+
+if __name__ == "__main__":
+    success = run_all_tests()
+    if success:
+        print("All tests completed successfully!")
+    else:
+        print("Some tests failed. Check output for details.")
