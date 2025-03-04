@@ -8,6 +8,7 @@ from src.contract import get_nft_status
 from src.config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
 from scripts.mint_helper import mint_nft
 from scripts.novena_helper import process_novena, reset_novena
+from scripts.sync_stags import sync_stags
 
 agent = StagAgent()
 
@@ -17,27 +18,35 @@ with open(prompts_file) as f:
 
 def test_individual_novena():
     print("\n=== Testing Individual Novena ===")
-    tx_hash, token_id = mint_nft(WALLET_ADDRESS, PRIVATE_KEY)
-    if not tx_hash:
-        print("Minting failed for individual.")
-        return False
-    user_id = f"stag-{token_id}"
-    agent.users[user_id] = {
-        "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
-        "owner": WALLET_ADDRESS,
-        "token_id": token_id,
-        "day": 1,
-        "days_completed": 0,
-        "responses": {},
-        "fiat_paid": 3.33,
-        "timezone_offset": -7,
-        "mint_tx": tx_hash,
-        "stake_tx": "unknown",
-        "total_staked": 0.0,
-        "stake_remaining": 0.0,
-        "daily_stake": 0.0
-    }
-    agent.save_users()
+    sync_stags()  # Sync existing NFTs
+    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == WALLET_ADDRESS and not u.get("herdmaster")]
+    
+    if not existing_users or all(get_nft_status(u["token_id"])["has_active_novena"] for u in [agent.users[uid] for uid in existing_users]):
+        print(f"No eligible NFTs for {WALLET_ADDRESS} or all active—minting new one.")
+        tx_hash, token_id = mint_nft(WALLET_ADDRESS, PRIVATE_KEY)
+        if not tx_hash:
+            print("Minting failed for individual.")
+            return False
+        user_id = f"stag-{token_id}"
+        agent.users[user_id] = {
+            "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
+            "owner": WALLET_ADDRESS,
+            "token_id": token_id,
+            "day": 1,
+            "days_completed": 0,
+            "responses": {},
+            "fiat_paid": 3.33,
+            "timezone_offset": -7,
+            "mint_tx": tx_hash,
+            "stake_tx": "unknown",
+            "total_staked": 0.0,
+            "stake_remaining": 0.0,
+            "daily_stake": 0.0
+        }
+    else:
+        user_id = existing_users[0]
+        token_id = agent.users[user_id]["token_id"]
+        print(f"Using existing NFT {user_id}")
     
     if not process_novena(token_id, WALLET_ADDRESS, PRIVATE_KEY):
         print(f"Failed to process novena for {user_id}")
@@ -61,12 +70,13 @@ def test_individual_novena():
 
 def test_herdmaster_novena():
     print("\n=== Testing Herdmaster Novena ===")
+    sync_stags()
     target_num = 3
     staked_target = 1
-    existing_users = []
+    existing_users = [uid for uid, u in agent.users.items() if u.get("herdmaster") == HERDMASTER_ADDRESS]
     
-    # Mint 3 NFTs
-    for _ in range(target_num):
+    # Mint up to 3 NFTs
+    while len(existing_users) < target_num:
         tx_hash, token_id = mint_nft(HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY)
         if not tx_hash:
             print("Minting failed for herdmaster.")
@@ -89,6 +99,7 @@ def test_herdmaster_novena():
             "herdmaster": HERDMASTER_ADDRESS
         }
         existing_users.append(user_id)
+        agent.save_users()
     
     # Stake only 1 NFT
     staked_users = []
