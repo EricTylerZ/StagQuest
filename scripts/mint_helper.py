@@ -1,6 +1,7 @@
 # scripts/mint_helper.py
 import sys
 import os
+import json  # Added this import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.config import w3, CONTRACT_ADDRESS, WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
 

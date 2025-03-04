@@ -11,6 +11,7 @@ __pycache__/
 
 # Data files (generated or sensitive)
 data/users.json
+data/users_old.json
 data/message_log.json
 
 # Documentation files (text files, etc.)
