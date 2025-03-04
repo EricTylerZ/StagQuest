@@ -6,6 +6,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.config import w3, CONTRACT_ADDRESS, WALLET_ADDRESS, HERDMASTER_ADDRESS
 from src.contract import get_tokens_by_owner, get_nft_status
 
+# Absolute path to data directory
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
 def sync_stags():
     users = {}
     addresses = [WALLET_ADDRESS, HERDMASTER_ADDRESS]
@@ -29,7 +32,9 @@ def sync_stags():
                     user_data["herdmaster"] = HERDMASTER_ADDRESS
                 users[user_id] = user_data
     
-    with open("../data/users.json", "w") as f:
+    # Use absolute path for users.json
+    users_file = os.path.join(data_dir, 'users.json')
+    with open(users_file, "w") as f:
         json.dump(users, f, indent=4)
     print(f"Synced {len(users)} stags to users.json: {list(users.keys())}")
 
