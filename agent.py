@@ -75,16 +75,14 @@ class StagAgent:
     def record_response(self, user_id, day, prayer, response):
         message_id = f"{user_id}|{day}|{prayer}"
         if message_id in self.message_log:
-            self.message_log[message_id]["responded"] = True
-            self.message_log[message_id]["response"] = response
+            if response is not None:
+                self.message_log[message_id]["responded"] = True
+                self.message_log[message_id]["response"] = response
             self.save_message_log()
         user = self.users[user_id]
         token_id = user["token_id"]
-        if prayer == "Compline":
-            success = all(
-                self.message_log[f"{user_id}|{day}|{p}"].get("response") == "y"
-                for p in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]
-            )
+        if prayer == "Compline" and response is not None:
+            success = response.lower() == "y"
             resolve_day(token_id, success, WALLET_ADDRESS, PRIVATE_KEY)
             user["day"] += 1
             self.save_users()
