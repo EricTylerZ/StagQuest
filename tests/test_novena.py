@@ -18,7 +18,6 @@ with open(prompts_file) as f:
 
 def test_individual_novena():
     print("\n=== Testing Individual Novena ===")
-    sync_stags()  # Sync existing NFTs
     existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == WALLET_ADDRESS and not u.get("herdmaster")]
     
     if not existing_users:
@@ -75,7 +74,6 @@ def test_individual_novena():
 
 def test_herdmaster_novena():
     print("\n=== Testing Herdmaster Novena ===")
-    sync_stags()
     target_num = 3
     staked_target = 1
     existing_users = [uid for uid, u in agent.users.items() if u.get("herdmaster") == HERDMASTER_ADDRESS]
@@ -138,6 +136,7 @@ def test_herdmaster_novena():
 
 def run_all_tests():
     print("Running all novena tests...")
+    sync_stags()  # Single sync for all tests
     individual_passed = test_individual_novena()
     herdmaster_passed = test_herdmaster_novena()
     
