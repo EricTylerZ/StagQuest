@@ -39,7 +39,11 @@ class StagAgent:
             raise ValueError("Minimum $3.33 required!")
         if private_key is None:
             private_key = PRIVATE_KEY
-        user_id = f"stag-{len(self.users) + 1}"
+        # Find the next available stag ID
+        i = 2  # Start after stag-1/stag-2
+        while f"stag-{i}" in self.users:
+            i += 1
+        user_id = f"stag-{i}"
         tx_hash, token_id = mint_nft(signer_addr, private_key)
         if token_id is None:
             print("Failed to mint NFT. Aborting onboarding.")
