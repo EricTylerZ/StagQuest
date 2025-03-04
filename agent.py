@@ -1,5 +1,5 @@
 # agent.py
-from config import w3, WALLET_ADDRESS
+from config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS
 from contract import mint_nft, stake_nft, resolve_day, get_nft_status
 import json
 from datetime import datetime
@@ -31,20 +31,29 @@ class StagAgent:
         with open("message_log.json", "w") as f:
             json.dump(self.message_log, f, indent=4)
 
-    def onboard_user(self, herdmaster_addr, fiat_amount):
+    def onboard_user(self, signer_addr, fiat_amount, timezone_offset=-7, herdmaster_addr=None, private_key=None):
         if fiat_amount < 3.33:
             raise ValueError("Minimum $3.33 required!")
+        if private_key is None:
+            private_key = PRIVATE_KEY
         user_id = f"stag-{len(self.users) + 1}"
-        tx_hash, token_id = mint_nft()
-        stake_nft(token_id)  # Default staking amounts
-        self.users[user_id] = {
-            "herdmaster": herdmaster_addr,
+        tx_hash, token_id = mint_nft(signer_addr, private_key)
+        if token_id is None:
+            print("Failed to mint NFT. Aborting onboarding.")
+            return None
+        stake_nft(token_id, signer_addr, private_key)
+        user_data = {
+            "contract_address": CONTRACT_ADDRESS,
             "fiat_paid": fiat_amount,
+            "timezone_offset": timezone_offset,
             "token_id": token_id,
             "day": 1,
             "mint_tx": tx_hash,
-            "responses": {}  # Track daily responses
+            "responses": {}
         }
+        if herdmaster_addr:
+            user_data["herdmaster"] = herdmaster_addr
+        self.users[user_id] = user_data
         self.save_users()
         return user_id
 
@@ -67,11 +76,11 @@ class StagAgent:
             self.save_message_log()
         user = self.users[user_id]
         token_id = user["token_id"]
-        if prayer == "Compline":  # Resolve day after last message
+        if prayer == "Compline":
             success = all(
                 self.message_log[f"{user_id}|{day}|{p}"].get("response") == "y"
                 for p in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]
             )
-            resolve_day(token_id, success)
+            resolve_day(token_id, success, WALLET_ADDRESS, PRIVATE_KEY)
             user["day"] += 1
             self.save_users()

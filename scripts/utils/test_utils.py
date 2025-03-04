@@ -3,26 +3,26 @@ import sys
 import os
 import json
 
-# Adjust the path to import StagAgent from the root directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from agent import StagAgent
+from config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
 
-# Initialize the agent
 agent = StagAgent()
 
-# Load prompts
 with open(os.path.join(os.path.dirname(__file__), '..', '..', 'prompts.json')) as f:
     prompts = json.load(f)
 
-def onboard_test_users(herdmaster_addr, num_users=3, fiat_amount=3.33):
-    """Onboard multiple test users and mint NFTs."""
+def onboard_test_users(signer_addr, private_key, num_users=1, herdmaster_addr=None):
+    user_ids = []
     for _ in range(num_users):
-        user_id = agent.onboard_user(herdmaster_addr, fiat_amount)
-        print(f"Onboarded user {user_id} for herdmaster {herdmaster_addr}")
-    return [uid for uid in agent.users if agent.users[uid]["herdmaster"] == herdmaster_addr]
+        uid = agent.onboard_user(signer_addr, 3.33, timezone_offset=-7, herdmaster_addr=herdmaster_addr, private_key=private_key)
+        if uid:
+            user_ids.append(uid)
+            role = "herdmaster" if herdmaster_addr else "individual"
+            print(f"Onboarded user {uid} as {role} with signer {signer_addr}")
+    return user_ids
 
 def log_daily_messages(user_id):
-    """Log the 7 daily messages for a user's current day."""
     user = agent.users[user_id]
     day = user["day"]
     if day > 9:
@@ -34,28 +34,31 @@ def log_daily_messages(user_id):
         print(f"Logged message for {user_id}, Day {day}, {prayer}")
 
 def simulate_responses(user_id, response="y"):
-    """Simulate responses for all 7 messages of a user's current day."""
     user = agent.users[user_id]
     day = user["day"]
     for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
         agent.record_response(user_id, day, prayer, response)
         print(f"Recorded response '{response}' for {user_id}, Day {day}, {prayer}")
 
-def run_test(herdmaster_addr, num_users=3, response="y"):
-    """Run a full test: onboard users, log messages, simulate responses."""
-    # Onboard users and get their IDs
-    user_ids = onboard_test_users(herdmaster_addr, num_users)
-    
-    # Process each user
+def run_test(signer_addr, private_key, num_users=1, herdmaster_addr=None, response="y"):
+    user_ids = onboard_test_users(signer_addr, private_key, num_users, herdmaster_addr)
     for user_id in user_ids:
-        log_daily_messages(user_id)        # Queue up messages
-        simulate_responses(user_id, response)  # Simulate responses
-        
-        # Check if the day advanced
+        log_daily_messages(user_id)
+        simulate_responses(user_id, response)
         user = agent.users[user_id]
         if user["day"] > 1:
             print(f"{user_id} has advanced to day {user['day']}")
 
 if __name__ == "__main__":
-    herdmaster_addr = input("Enter your herdmaster address: ")
-    run_test(herdmaster_addr)
+    test_type = input("Test as herdmaster (h) or individual (i)? ").lower()
+    if test_type == "h":
+        signer_addr = input(f"Enter herdmaster address [{HERDMASTER_ADDRESS}]: ") or HERDMASTER_ADDRESS
+        private_key = HERDMASTER_PRIVATE_KEY
+        num_users = int(input("Number of users to onboard (default 3): ") or 3)
+        run_test(signer_addr, private_key, num_users, herdmaster_addr=signer_addr)
+    elif test_type == "i":
+        signer_addr = input(f"Enter individual address [{WALLET_ADDRESS}]: ") or WALLET_ADDRESS
+        private_key = PRIVATE_KEY
+        run_test(signer_addr, private_key, num_users=1)  # Only 1 for individual
+    else:
+        print("Invalid choice. Use 'h' for herdmaster or 'i' for individual.")

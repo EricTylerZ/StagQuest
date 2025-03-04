@@ -9,3 +9,4 @@
 __pycache__/
 *.pycusers.json 
 users.json 
+message_log.json
