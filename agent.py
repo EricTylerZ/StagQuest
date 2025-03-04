@@ -1,5 +1,5 @@
 # agent.py
-from config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
+from config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 from contract import mint_nft, stake_nft, resolve_day, get_nft_status, get_tokens_by_owner
 import json
 from datetime import datetime
@@ -36,7 +36,6 @@ class StagAgent:
             json.dump(self.message_log, f, indent=4)
 
     def sync_with_contract(self):
-        # Sync individual and herdmaster addresses
         for addr in [WALLET_ADDRESS, HERDMASTER_ADDRESS]:
             token_ids = get_tokens_by_owner(addr)
             for token_id in token_ids:
@@ -52,7 +51,6 @@ class StagAgent:
                         while f"stag-{i}" in self.users:
                             i += 1
                         user_id = f"stag-{i}"
-                    # Update or create user entry
                     user_data = self.users.get(user_id, {})
                     user_data.update({
                         "contract_address": CONTRACT_ADDRESS,
@@ -63,7 +61,6 @@ class StagAgent:
                     })
                     if addr == HERDMASTER_ADDRESS and "herdmaster" not in user_data:
                         user_data["herdmaster"] = HERDMASTER_ADDRESS
-                    # Fill in defaults if missing
                     user_data.setdefault("fiat_paid", 3.33)
                     user_data.setdefault("timezone_offset", -7)
                     user_data.setdefault("mint_tx", "unknown")
@@ -122,6 +119,6 @@ class StagAgent:
         token_id = user["token_id"]
         if prayer == "Compline" and response is not None:
             success = response.lower() == "y"
-            resolve_day(token_id, success, WALLET_ADDRESS, PRIVATE_KEY)
+            resolve_day(token_id, success, OWNER_ADDRESS, OWNER_PRIVATE_KEY)  # Use owner credentials
             user["day"] += 1
             self.save_users()

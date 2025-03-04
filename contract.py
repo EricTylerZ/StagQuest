@@ -79,8 +79,22 @@ def get_nft_status(token_id):
             "days_completed": contract.functions.daysCompleted(token_id).call(),
             "successful_days": contract.functions.successfulDays(token_id).call(),
             "has_active_novena": contract.functions.hasActiveNovena(token_id).call(),
-            "stake_remaining": w3.from_wei(contract.functions.stakes(token_id).call(), "ether")
+            "stake_remaining": w3.from_wei(contract.functions.stakes(token_id).call(), "ether"),
+            "daily_stake": w3.from_wei(contract.functions.dailyStakes(token_id).call(), "ether"),
+            "owner": contract.functions.ownerOf(token_id).call()
         }
     except Exception as e:
         print(f"Error getting NFT status: {str(e)}")
         return None
+
+def get_tokens_by_owner(owner_addr):
+    try:
+        balance = contract.functions.balanceOf(owner_addr).call()
+        tokens = []
+        for i in range(balance):
+            token_id = contract.functions.tokenOfOwnerByIndex(owner_addr, i).call()
+            tokens.append(token_id)
+        return tokens
+    except Exception as e:
+        print(f"Error fetching tokens for {owner_addr}: {str(e)}")
+        return []

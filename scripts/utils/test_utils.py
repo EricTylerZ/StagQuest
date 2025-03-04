@@ -14,17 +14,19 @@ with open(os.path.join(os.path.dirname(__file__), '..', '..', 'prompts.json')) a
 
 def onboard_test_users(signer_addr, private_key, num_users=1, herdmaster_addr=None):
     user_ids = []
-    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == signer_addr and not u.get("herdmaster")]
+    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == signer_addr and (herdmaster_addr is None or u.get("herdmaster") == herdmaster_addr)]
     if existing_users and not herdmaster_addr:
         print(f"Address {signer_addr} already has NFT(s): {existing_users}. Using existing user instead of minting.")
-        return existing_users[:1]  # Return only one for individual
-    for _ in range(num_users):
+        return existing_users[:1]
+    elif existing_users and herdmaster_addr:
+        print(f"Address {signer_addr} already has NFT(s): {existing_users}. Adding more.")
+    for _ in range(num_users - len(existing_users)):
         uid = agent.onboard_user(signer_addr, 3.33, timezone_offset=-7, herdmaster_addr=herdmaster_addr, private_key=private_key)
         if uid:
             user_ids.append(uid)
             role = "herdmaster" if herdmaster_addr else "individual"
             print(f"Onboarded user {uid} as {role} with signer {signer_addr}")
-    return user_ids
+    return existing_users + user_ids
 
 def log_daily_messages(user_id):
     user = agent.users[user_id]

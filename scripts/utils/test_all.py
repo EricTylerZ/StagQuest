@@ -6,7 +6,7 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from agent import StagAgent
 from contract import get_nft_status
-from config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
+from config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY, OWNER_ADDRESS
 
 agent = StagAgent()
 
@@ -40,7 +40,10 @@ def test_individual():
         return False
     
     status = get_nft_status(token_id)
-    if not status or status["days_completed"] != day or status["successful_days"] != day:
+    if not status:
+        print(f"Error: Could not fetch NFT status for {token_id}")
+        return False
+    if status["days_completed"] != day or status["successful_days"] != day:
         print(f"Error: NFT status for {token_id} incorrect: {status}")
         return False
     
@@ -76,7 +79,10 @@ def test_herdmaster():
             return False
         
         status = get_nft_status(token_id)
-        if not status or status["days_completed"] != day or status["successful_days"] != day:
+        if not status:
+            print(f"Error: Could not fetch NFT status for {token_id}")
+            return False
+        if status["days_completed"] != day or status["successful_days"] != day:
             print(f"Error: NFT status for {token_id} incorrect: {status}")
             return False
     
