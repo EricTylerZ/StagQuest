@@ -79,4 +79,8 @@ def get_nft_status(token_id):
             "days_completed": contract.functions.daysCompleted(token_id).call(),
             "successful_days": contract.functions.successfulDays(token_id).call(),
             "has_active_novena": contract.functions.hasActiveNovena(token_id).call(),
-            "stake_remaining": w3.from_
+            "stake_remaining": w3.from_wei(contract.functions.stakes(token_id).call(), "ether")
+        }
+    except Exception as e:
+        print(f"Error getting NFT status: {str(e)}")
+        return None
