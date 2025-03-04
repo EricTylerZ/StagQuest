@@ -42,6 +42,8 @@ def test_individual_novena():
             "stake_remaining": 0.0,
             "daily_stake": 0.0
         }
+        agent.save_users()
+        sync_stags()  # Resync after minting
     else:
         user_id = existing_users[0]
         token_id = agent.users[user_id]["token_id"]
@@ -63,6 +65,7 @@ def test_individual_novena():
     agent.record_response(user_id, day, "Compline", "y")
     agent.users[user_id]["day"] += 1
     agent.save_users()
+    sync_stags()  # Resync after processing
     
     status = get_nft_status(token_id)
     if status["days_completed"] != day or status["successful_days"] != day:
@@ -103,6 +106,7 @@ def test_herdmaster_novena():
         }
         existing_users.append(user_id)
         agent.save_users()
+        sync_stags()  # Resync after each mint
     
     # Stake only 1 NFT
     staked_users = []
@@ -124,6 +128,8 @@ def test_herdmaster_novena():
         agent.users[user_id]["day"] += 1
     
     agent.save_users()
+    sync_stags()  # Resync after processing
+    
     for user_id in staked_users:
         token_id = agent.users[user_id]["token_id"]
         status = get_nft_status(token_id)

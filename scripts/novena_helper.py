@@ -54,7 +54,7 @@ def stake_nft(token_id, address, private_key, total_amount=0.00081, daily_amount
         return None
 
 def resolve_day(token_id):
-    """Resolve a day for an NFT via NovenaProcessor."""
+    """Resolve a day for an NFT via NovenaProcessor using OWNER_ADDRESS."""
     try:
         nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
         tx = novena_contract.functions.resolveDay(token_id, True).build_transaction({

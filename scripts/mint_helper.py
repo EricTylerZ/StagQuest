@@ -26,12 +26,18 @@ def mint_nft(address, private_key, value=0.00009):
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 0:
             print(f"Minting failed: {tx_hash.hex()}")
-            return None
-        print(f"Minted NFT with tx: {tx_hash.hex()}")
-        return tx_hash.hex()
+            return None, None
+        
+        for log in receipt["logs"]:
+            if log["topics"][0] == w3.keccak(text="Transfer(address,address,uint256)"):
+                token_id = int(log["topics"][3].hex(), 16)
+                return tx_hash.hex(), token_id  # Return only tx_hash and token_id
+        
+        print(f"No Transfer event found: {tx_hash.hex()}")
+        return tx_hash.hex(), None
     except Exception as e:
         print(f"Error minting NFT: {e}")
-        return None
+        return None, None
 
 if __name__ == "__main__":
     print("Minting for individual...")
