@@ -14,6 +14,10 @@ with open(os.path.join(os.path.dirname(__file__), '..', '..', 'prompts.json')) a
 
 def onboard_test_users(signer_addr, private_key, num_users=1, herdmaster_addr=None):
     user_ids = []
+    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == signer_addr or u.get("herdmaster") == signer_addr]
+    if existing_users and not herdmaster_addr:
+        print(f"Address {signer_addr} already has NFT(s): {existing_users}. Using existing user instead of minting.")
+        return existing_users
     for _ in range(num_users):
         uid = agent.onboard_user(signer_addr, 3.33, timezone_offset=-7, herdmaster_addr=herdmaster_addr, private_key=private_key)
         if uid:
@@ -36,29 +40,32 @@ def log_daily_messages(user_id):
 def simulate_responses(user_id, response="y"):
     user = agent.users[user_id]
     day = user["day"]
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        agent.record_response(user_id, day, prayer, response)
-        print(f"Recorded response '{response}' for {user_id}, Day {day}, {prayer}")
+    # Only record response for Compline
+    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers"]:
+        agent.record_response(user_id, day, prayer, None)  # No response until Compline
+    agent.record_response(user_id, day, "Compline", response)
+    print(f"Recorded response '{response}' for {user_id}, Day {day}, Compline")
+    if user["day"] > day:
+        print(f"{user_id} has advanced to day {user['day']}")
 
 def run_test(signer_addr, private_key, num_users=1, herdmaster_addr=None, response="y"):
     user_ids = onboard_test_users(signer_addr, private_key, num_users, herdmaster_addr)
     for user_id in user_ids:
         log_daily_messages(user_id)
         simulate_responses(user_id, response)
-        user = agent.users[user_id]
-        if user["day"] > 1:
-            print(f"{user_id} has advanced to day {user['day']}")
 
 if __name__ == "__main__":
     test_type = input("Test as herdmaster (h) or individual (i)? ").lower()
     if test_type == "h":
-        signer_addr = input(f"Enter herdmaster address [{HERDMASTER_ADDRESS}]: ") or HERDMASTER_ADDRESS
+        signer_addr = HERDMASTER_ADDRESS
         private_key = HERDMASTER_PRIVATE_KEY
-        num_users = int(input("Number of users to onboard (default 3): ") or 3)
+        num_users = 3
+        print(f"Testing herdmaster with address {signer_addr}")
         run_test(signer_addr, private_key, num_users, herdmaster_addr=signer_addr)
     elif test_type == "i":
-        signer_addr = input(f"Enter individual address [{WALLET_ADDRESS}]: ") or WALLET_ADDRESS
+        signer_addr = WALLET_ADDRESS
         private_key = PRIVATE_KEY
-        run_test(signer_addr, private_key, num_users=1)  # Only 1 for individual
+        print(f"Testing individual with address {signer_addr}")
+        run_test(signer_addr, private_key, num_users=1)
     else:
         print("Invalid choice. Use 'h' for herdmaster or 'i' for individual.")

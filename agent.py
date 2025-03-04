@@ -47,6 +47,7 @@ class StagAgent:
         stake_nft(token_id, signer_addr, private_key)
         user_data = {
             "contract_address": CONTRACT_ADDRESS,
+            "owner": signer_addr,
             "fiat_paid": fiat_amount,
             "timezone_offset": timezone_offset,
             "token_id": token_id,
