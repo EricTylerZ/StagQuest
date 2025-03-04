@@ -15,6 +15,9 @@ class StagAgent:
                 return json.load(f)
         except FileNotFoundError:
             return {}
+        except json.JSONDecodeError as e:
+            print(f"Error loading users.json: {e}")
+            return {}
 
     def save_users(self):
         with open("users.json", "w") as f:
