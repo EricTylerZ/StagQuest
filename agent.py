@@ -1,6 +1,6 @@
 # agent.py
-from config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS
-from contract import mint_nft, stake_nft, resolve_day, get_nft_status
+from config import w3, WALLET_ADDRESS, PRIVATE_KEY, CONTRACT_ADDRESS, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
+from contract import mint_nft, stake_nft, resolve_day, get_nft_status, get_tokens_by_owner
 import json
 from datetime import datetime
 
@@ -8,6 +8,7 @@ class StagAgent:
     def __init__(self):
         self.users = self.load_users()
         self.message_log = self.load_message_log()
+        self.sync_with_contract()
 
     def load_users(self):
         try:
@@ -34,13 +35,47 @@ class StagAgent:
         with open("message_log.json", "w") as f:
             json.dump(self.message_log, f, indent=4)
 
+    def sync_with_contract(self):
+        # Sync individual and herdmaster addresses
+        for addr in [WALLET_ADDRESS, HERDMASTER_ADDRESS]:
+            token_ids = get_tokens_by_owner(addr)
+            for token_id in token_ids:
+                status = get_nft_status(token_id)
+                if status:
+                    user_id = None
+                    for uid, data in self.users.items():
+                        if data.get("token_id") == token_id:
+                            user_id = uid
+                            break
+                    if not user_id:
+                        i = 2
+                        while f"stag-{i}" in self.users:
+                            i += 1
+                        user_id = f"stag-{i}"
+                    # Update or create user entry
+                    user_data = self.users.get(user_id, {})
+                    user_data.update({
+                        "contract_address": CONTRACT_ADDRESS,
+                        "owner": status["owner"],
+                        "token_id": token_id,
+                        "day": status["days_completed"] + 1 if status["has_active_novena"] else 10,
+                        "responses": user_data.get("responses", {})
+                    })
+                    if addr == HERDMASTER_ADDRESS and "herdmaster" not in user_data:
+                        user_data["herdmaster"] = HERDMASTER_ADDRESS
+                    # Fill in defaults if missing
+                    user_data.setdefault("fiat_paid", 3.33)
+                    user_data.setdefault("timezone_offset", -7)
+                    user_data.setdefault("mint_tx", "unknown")
+                    self.users[user_id] = user_data
+        self.save_users()
+
     def onboard_user(self, signer_addr, fiat_amount, timezone_offset=-7, herdmaster_addr=None, private_key=None):
         if fiat_amount < 3.33:
             raise ValueError("Minimum $3.33 required!")
         if private_key is None:
             private_key = PRIVATE_KEY
-        # Find the next available stag ID
-        i = 2  # Start after stag-1/stag-2
+        i = 2
         while f"stag-{i}" in self.users:
             i += 1
         user_id = f"stag-{i}"
