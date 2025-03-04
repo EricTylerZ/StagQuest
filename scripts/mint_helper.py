@@ -1,7 +1,7 @@
 # scripts/mint_helper.py
 import sys
 import os
-import json  # Added this import
+import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.config import w3, CONTRACT_ADDRESS, WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
 
@@ -31,7 +31,8 @@ def mint_nft(address, private_key, value=0.00009):
         for log in receipt["logs"]:
             if log["topics"][0] == w3.keccak(text="Transfer(address,address,uint256)"):
                 token_id = int(log["topics"][3].hex(), 16)
-                return tx_hash.hex(), token_id  # Return only tx_hash and token_id
+                print(f"Minted NFT with tx: {tx_hash.hex()}, token_id: {token_id}")
+                return tx_hash.hex(), token_id
         
         print(f"No Transfer event found: {tx_hash.hex()}")
         return tx_hash.hex(), None
