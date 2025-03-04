@@ -3,10 +3,8 @@ import sys
 import os
 import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.config import w3, WALLET_ADDRESS, PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
+from src.config import w3, CONTRACT_ADDRESS, NOVENA_PROCESSOR_ADDRESS, WALLET_ADDRESS, PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 from web3 import Web3
-
-NOVENA_PROCESSOR_ADDRESS = "0x630E91fAB353b87357E022f5422C29D7c0c95D41"
 
 with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'novena_abi.json'), 'r') as f:
     novena_abi = json.load(f)
@@ -16,13 +14,17 @@ novena_contract = w3.eth.contract(address=NOVENA_PROCESSOR_ADDRESS, abi=novena_a
 def get_nft_status(token_id):
     """Fetch NFT status from NovenaProcessor."""
     try:
-        status = novena_contract.functions.getStatus(token_id).call()
+        days_completed = novena_contract.functions.daysCompleted(token_id).call()
+        successful_days = novena_contract.functions.successfulDays(token_id).call()
+        has_active = novena_contract.functions.hasActiveNovena(token_id).call()
+        stake = novena_contract.functions.stakes(token_id).call()
+        daily = novena_contract.functions.dailyStakes(token_id).call()
         return {
-            "days_completed": status[0],
-            "successful_days": status[1],
-            "has_active_novena": status[2],
-            "stake_remaining": float(w3.from_wei(status[3], "ether")),
-            "daily_stake": float(w3.from_wei(status[4], "ether"))
+            "days_completed": days_completed,
+            "successful_days": successful_days,
+            "has_active_novena": has_active,
+            "stake_remaining": float(w3.from_wei(stake, "ether")),
+            "daily_stake": float(w3.from_wei(daily, "ether"))
         }
     except Exception as e:
         print(f"Error getting NFT status: {e}")

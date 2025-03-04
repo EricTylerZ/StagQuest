@@ -1,10 +1,8 @@
 # src/contract.py
 import os
 import json
-from src.config import w3, CONTRACT_ADDRESS, WALLET_ADDRESS, HERDMASTER_ADDRESS
+from src.config import w3, CONTRACT_ADDRESS, NOVENA_PROCESSOR_ADDRESS, WALLET_ADDRESS, HERDMASTER_ADDRESS
 from web3 import Web3
-
-NOVENA_PROCESSOR_ADDRESS = "0x630E91fAB353b87357E022f5422C29D7c0c95D41"
 
 # Load ABIs
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
@@ -17,7 +15,7 @@ stag_contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=contract_abi)
 novena_contract = w3.eth.contract(address=NOVENA_PROCESSOR_ADDRESS, abi=novena_abi)
 
 def mint_nft(signer_addr, private_key):
-    """Mint an NFT via StagQuest (not used here, kept for reference)."""
+    """Mint an NFT via StagQuest."""
     try:
         nonce = w3.eth.get_transaction_count(signer_addr)
         tx = stag_contract.functions.mint().build_transaction({
@@ -92,18 +90,18 @@ def resolve_day(token_id, success, signer_addr, private_key):
 def get_nft_status(token_id):
     """Get NFT status from NovenaProcessor."""
     try:
-        status = novena_contract.functions.daysCompleted(token_id).call()
+        days_completed = novena_contract.functions.daysCompleted(token_id).call()
         successful_days = novena_contract.functions.successfulDays(token_id).call()
         has_active = novena_contract.functions.hasActiveNovena(token_id).call()
         stake = novena_contract.functions.stakes(token_id).call()
         daily = novena_contract.functions.dailyStakes(token_id).call()
         owner = stag_contract.functions.ownerOf(token_id).call()
         return {
-            "days_completed": status,
+            "days_completed": days_completed,
             "successful_days": successful_days,
             "has_active_novena": has_active,
-            "stake_remaining": w3.from_wei(stake, "ether"),
-            "daily_stake": w3.from_wei(daily, "ether"),
+            "stake_remaining": float(w3.from_wei(stake, "ether")),
+            "daily_stake": float(w3.from_wei(daily, "ether")),
             "owner": owner
         }
     except Exception as e:

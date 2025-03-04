@@ -17,12 +17,28 @@ with open(prompts_file) as f:
 
 def test_individual_novena():
     print("\n=== Testing Individual Novena ===")
-    user_id = agent.onboard_user(WALLET_ADDRESS, 3.33, private_key=PRIVATE_KEY)
-    if not user_id:
-        print("Onboarding failed.")
+    tx_hash, token_id = mint_nft(WALLET_ADDRESS, PRIVATE_KEY)
+    if not tx_hash:
+        print("Minting failed for individual.")
         return False
+    user_id = f"stag-{token_id}"
+    agent.users[user_id] = {
+        "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
+        "owner": WALLET_ADDRESS,
+        "token_id": token_id,
+        "day": 1,
+        "days_completed": 0,
+        "responses": {},
+        "fiat_paid": 3.33,
+        "timezone_offset": -7,
+        "mint_tx": tx_hash,
+        "stake_tx": "unknown",
+        "total_staked": 0.0,
+        "stake_remaining": 0.0,
+        "daily_stake": 0.0
+    }
+    agent.save_users()
     
-    token_id = agent.users[user_id]["token_id"]
     if not process_novena(token_id, WALLET_ADDRESS, PRIVATE_KEY):
         print(f"Failed to process novena for {user_id}")
         return False
@@ -46,26 +62,47 @@ def test_individual_novena():
 def test_herdmaster_novena():
     print("\n=== Testing Herdmaster Novena ===")
     target_num = 3
-    staked_target = 2
-    existing_users = [uid for uid, u in agent.users.items() if u.get("herdmaster") == HERDMASTER_ADDRESS]
+    staked_target = 1
+    existing_users = []
     
-    if len(existing_users) < target_num:
-        for _ in range(target_num - len(existing_users)):
-            uid = agent.onboard_user(HERDMASTER_ADDRESS, 3.33, herdmaster_addr=HERDMASTER_ADDRESS, private_key=HERDMASTER_PRIVATE_KEY)
-            if uid:
-                existing_users.append(uid)
-                print(f"Onboarded {uid}")
-    
-    staked_users = []
-    for user_id in existing_users[:staked_target]:
-        token_id = agent.users[user_id]["token_id"]
-        if not process_novena(token_id, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY):
-            print(f"Failed to process novena for {user_id}")
+    # Mint 3 NFTs
+    for _ in range(target_num):
+        tx_hash, token_id = mint_nft(HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY)
+        if not tx_hash:
+            print("Minting failed for herdmaster.")
             return False
-        staked_users.append(user_id)
+        user_id = f"stag-{token_id}"
+        agent.users[user_id] = {
+            "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
+            "owner": HERDMASTER_ADDRESS,
+            "token_id": token_id,
+            "day": 1,
+            "days_completed": 0,
+            "responses": {},
+            "fiat_paid": 3.33,
+            "timezone_offset": -7,
+            "mint_tx": tx_hash,
+            "stake_tx": "unknown",
+            "total_staked": 0.0,
+            "stake_remaining": 0.0,
+            "daily_stake": 0.0,
+            "herdmaster": HERDMASTER_ADDRESS
+        }
+        existing_users.append(user_id)
     
+    # Stake only 1 NFT
+    staked_users = []
+    user_id = existing_users[0]
+    token_id = agent.users[user_id]["token_id"]
+    if not process_novena(token_id, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY):
+        print(f"Failed to process novena for {user_id}")
+        return False
+    staked_users.append(user_id)
+    
+    # Process messaging for staked NFT
     for user_id in staked_users:
         day = agent.users[user_id]["day"]
+        token_id = agent.users[user_id]["token_id"]
         for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
             msg = prompts[f"Day {day}"][prayer]
             agent.log_message(user_id, day, prayer, msg, silent=True)
