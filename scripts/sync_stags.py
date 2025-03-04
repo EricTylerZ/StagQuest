@@ -1,4 +1,4 @@
-# scripts/sync_stags.py (minimal update)
+# scripts/sync_stags.py
 import sys
 import os
 import json
@@ -10,21 +10,25 @@ data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data')
 
 def get_mint_tx(token_id):
     """Fetch mint transaction hash for a token_id via Transfer event."""
-    contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=_get_contract_abi())
-    zero_address = "0x0000000000000000000000000000000000000000"
-    events = contract.events.Transfer.get_logs(
-        fromBlock=0,
-        toBlock='latest',
-        argument_filters={"from": zero_address, "tokenId": token_id}
-    )
-    if events:
-        return events[0].transactionHash.hex()
-    return "unknown"
-
-def _get_contract_abi():
-    """Load ABI from contract.py or hardcoded source."""
-    from src.contract import _get_contract
-    return _get_contract().abi
+    try:
+        # Load ABI directly (avoiding _get_contract dependency)
+        abi_path = os.path.join(os.path.dirname(__file__), '..', 'abi', 'stag-quest-abi.json')
+        with open(abi_path, 'r') as f:
+            abi = json.load(f)
+        contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)
+        
+        zero_address = "0x0000000000000000000000000000000000000000"
+        events = contract.events.Transfer.get_logs(
+            fromBlock=0,
+            toBlock='latest',
+            argument_filters={"from": zero_address, "tokenId": token_id}
+        )
+        if events:
+            return events[0].transactionHash.hex()
+        return "unknown"
+    except Exception as e:
+        print(f"Error fetching mint tx for token {token_id}: {e}")
+        return "unknown"
 
 def sync_stags():
     users = {}
@@ -45,7 +49,7 @@ def sync_stags():
                     "responses": {},
                     "fiat_paid": 3.33,
                     "timezone_offset": -7,
-                    "mint_tx": mint_tx  # Updated with real tx hash
+                    "mint_tx": mint_tx  # Now populated
                 }
                 if addr == HERDMASTER_ADDRESS:
                     user_data["herdmaster"] = HERDMASTER_ADDRESS
