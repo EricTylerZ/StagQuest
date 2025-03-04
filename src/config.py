@@ -1,4 +1,4 @@
-# config.py
+# src/config.py
 from dotenv import load_dotenv
 import os
 from web3 import Web3
@@ -13,7 +13,7 @@ TWILIO_PHONE = os.getenv("TWILIO_PHONE")
 TWILIO_MESSAGING_SID = os.getenv("TWILIO_MESSAGING_SID")
 CONTRACT_ADDRESS = "0x70bbAB9B860725A3f817dF4bCCB0C6edB2C4DcF8"
 OLD_CONTRACT_ADDRESS_1 = "0xfE745e106CF1C837b3A0e39f0528B2e67be8f9c4"
-RPC_URL = "https://sepolia.base.org"
+RPC_URL = "https://sepolia.base.org"  # Update this if you have a working RPC
 HERDMASTER_ADDRESS = os.getenv("HERDMASTER_ADDRESS")  # Influencer/herdmaster (0x2e0AA552...)
 HERDMASTER_PRIVATE_KEY = os.getenv("HERDMASTER_PRIVATE_KEY")
 OWNER_ADDRESS = os.getenv("OWNER_ADDRESS")  # Contract owner (likely 0x2e0AA552...)

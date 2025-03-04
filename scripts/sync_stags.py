@@ -5,7 +5,7 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.config import CONTRACT_ADDRESS, WALLET_ADDRESS, HERDMASTER_ADDRESS
 from src.contract import get_tokens_by_owner, get_nft_status
-from src.utils import get_stake_tx
+from src.utils import get_stake_tx, get_mint_tx
 
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
 
@@ -19,6 +19,7 @@ def sync_stags():
             if status:
                 user_id = f"stag-{token_id}"
                 stake_tx, total_staked = get_stake_tx(token_id)
+                mint_tx = get_mint_tx(token_id)
                 user_data = {
                     "contract_address": CONTRACT_ADDRESS,
                     "owner": status["owner"],
@@ -28,6 +29,7 @@ def sync_stags():
                     "responses": {},
                     "fiat_paid": 3.33,
                     "timezone_offset": -7,
+                    "mint_tx": mint_tx,
                     "stake_tx": stake_tx,
                     "total_staked": total_staked,
                     "stake_remaining": float(status["stake_remaining"]),
