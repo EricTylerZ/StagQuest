@@ -3,46 +3,32 @@ import sys
 import os
 import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.config import w3
 from scripts.sync_stags import sync_stags
 
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
-USERS_FILE = os.path.join(data_dir, 'users.json')
-PUBLIC_USERS_FILE = os.path.join(data_dir, 'public_users.json')
-
-def get_mint_eth(mint_tx):
-    """Fetch ETH value from a mint transaction hash."""
-    try:
-        if mint_tx == "unknown":
-            return 0.0
-        tx = w3.eth.get_transaction(mint_tx)
-        eth_value = w3.from_wei(tx['value'], 'ether')
-        return float(eth_value)
-    except Exception as e:
-        print(f"Error fetching tx {mint_tx}: {e}")
-        return 0.0
+USERS_FILE = os.path.join(data_dir, "users.json")
+PUBLIC_USERS_FILE = os.path.join(data_dir, "public_users.json")
 
 def sync_public_stags():
-    """Generate public_users.json with staking data from users.json."""
-    sync_stags()  # Update users.json with mint_tx
+    sync_stags()
     
-    with open(USERS_FILE, 'r') as f:
+    with open(USERS_FILE, "r") as f:
         users = json.load(f)
     
     public_users = {}
     for user_id, data in users.items():
-        eth_staked = get_mint_eth(data.get('mint_tx', 'unknown'))
         public_users[user_id] = {
             "user_id": user_id,
             "token_id": data["token_id"],
             "day": data["day"],
             "days_completed": data["days_completed"],
-            "eth_staked": eth_staked
+            "total_staked": data["total_staked"],
+            "stake_remaining": data["stake_remaining"],
+            "stake_tx": data["stake_tx"]
         }
     
-    with open(PUBLIC_USERS_FILE, 'w') as f:
+    with open(PUBLIC_USERS_FILE, "w") as f:
         json.dump(public_users, f, indent=4)
-    
     print(f"Generated public_users.json with {len(public_users)} stags: {list(public_users.keys())}")
 
 if __name__ == "__main__":
