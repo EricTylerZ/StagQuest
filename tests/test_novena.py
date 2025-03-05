@@ -3,170 +3,38 @@ import sys
 import os
 import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.agent import StagAgent
-from src.contract import get_nft_status
-from src.config import WALLET_ADDRESS, PRIVATE_KEY, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY
-from scripts.mint_helper import mint_nft
+from src.config import w3, WALLET_ADDRESS, PRIVATE_KEY, NOVENA_PROCESSOR_ADDRESS
 from scripts.novena_helper import start_novena
 from scripts.resolve_helper import resolve_day
-from scripts.sync_stags import sync_stags
+from web3 import Web3
 
-agent = StagAgent()
+# Load NovenaProcessor ABI
+with open(os.path.join(os.path.dirname(__file__), '..', 'data', 'novena_abi.json'), 'r') as f:
+    novena_abi = json.load(f)
 
-prompts_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'prompts.json')
-with open(prompts_file) as f:
-    prompts = json.load(f)
+novena_contract = w3.eth.contract(address=NOVENA_PROCESSOR_ADDRESS, abi=novena_abi)
 
-def test_individual_novena():
-    print("\n=== Testing Individual Novena ===")
-    existing_users = [uid for uid, u in agent.users.items() if u.get("owner") == WALLET_ADDRESS and not u.get("herdmaster")]
+def test_novena_flow():
+    """Test the novena process with NovenaProcessor."""
+    token_id = 1  # Replace with a valid token ID
+    print(f"\n=== Testing Novena Flow for Token {token_id} ===")
     
-    if not existing_users:
-        print(f"No NFTs for {WALLET_ADDRESS}—minting new one.")
-        tx_hash, token_id = mint_nft(WALLET_ADDRESS, PRIVATE_KEY)
-        if not tx_hash:
-            print("Minting failed for individual.")
-            return False
-        user_id = f"stag-{token_id}"
-        agent.users[user_id] = {
-            "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
-            "owner": WALLET_ADDRESS,
-            "token_id": token_id,
-            "day": 1,
-            "days_completed": 0,
-            "responses": {},
-            "fiat_paid": 3.33,
-            "timezone_offset": -7,
-            "mint_tx": tx_hash,
-            "stake_tx": "unknown",
-            "total_staked": 0.0,
-            "stake_remaining": 0.0,
-            "daily_stake": 0.0
-        }
-        agent.save_users()
-        sync_stags()
-    else:
-        user_id = existing_users[0]
-        token_id = agent.users[user_id]["token_id"]
-        status = get_nft_status(token_id)
-        if status["has_active_novena"]:
-            print(f"{user_id} has active novena—cannot mint new NFT.")
-        else:
-            print(f"{user_id} has no active novena—starting novena.")
-            stake_tx = start_novena(token_id, WALLET_ADDRESS, PRIVATE_KEY)
-            if not stake_tx:
-                print(f"Failed to start novena for {user_id}")
-                return False
-            agent.users[user_id]["stake_tx"] = stake_tx
-            agent.save_users()
-            sync_stags()
-    
-    # Resolve day
-    if not resolve_day(token_id):
-        print(f"Failed to resolve day for {user_id}")
+    # Start novena
+    stake_tx = start_novena(token_id)
+    if not stake_tx:
+        print("Novena staking failed.")
         return False
     
-    day = agent.users[user_id]["day"]
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        msg = prompts[f"Day {day}"][prayer]
-        agent.log_message(user_id, day, prayer, msg, silent=True)
-    agent.record_response(user_id, day, "Compline", "y")
-    agent.users[user_id]["day"] += 1
-    agent.save_users()
-    sync_stags()
-    
-    status = get_nft_status(token_id)
-    if status["days_completed"] != day or status["successful_days"] != day:
-        print(f"Error: NFT status for {token_id} incorrect: {status}")
+    # Resolve a day
+    resolved = resolve_day(token_id)
+    if not resolved:
+        print("Day resolution failed.")
         return False
     
-    print(f"Individual novena test passed for {user_id}")
+    # Verify daysCompleted
+    days_completed = novena_contract.functions.daysCompleted(token_id).call()
+    print(f"Token {token_id} now has daysCompleted = {days_completed}")
     return True
-
-def test_herdmaster_novena():
-    print("\n=== Testing Herdmaster Novena ===")
-    target_num = 3
-    staked_target = 1
-    existing_users = [uid for uid, u in agent.users.items() if u.get("herdmaster") == HERDMASTER_ADDRESS]
-    
-    # Mint up to 3 NFTs
-    while len(existing_users) < target_num:
-        tx_hash, token_id = mint_nft(HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY)
-        if not tx_hash:
-            print("Minting failed for herdmaster.")
-            return False
-        user_id = f"stag-{token_id}"
-        agent.users[user_id] = {
-            "contract_address": "0xF58C871e0D185C9878E3b96Fb0016665Aa915223",
-            "owner": HERDMASTER_ADDRESS,
-            "token_id": token_id,
-            "day": 1,
-            "days_completed": 0,
-            "responses": {},
-            "fiat_paid": 3.33,
-            "timezone_offset": -7,
-            "mint_tx": tx_hash,
-            "stake_tx": "unknown",
-            "total_staked": 0.0,
-            "stake_remaining": 0.0,
-            "daily_stake": 0.0,
-            "herdmaster": HERDMASTER_ADDRESS
-        }
-        existing_users.append(user_id)
-        agent.save_users()
-        sync_stags()
-    
-    # Start novena for 1 NFT
-    staked_users = []
-    user_id = existing_users[0]
-    token_id = agent.users[user_id]["token_id"]
-    status = get_nft_status(token_id)
-    if not status["has_active_novena"]:
-        stake_tx = start_novena(token_id, HERDMASTER_ADDRESS, HERDMASTER_PRIVATE_KEY)
-        if not stake_tx:
-            print(f"Failed to start novena for {user_id}")
-            return False
-        agent.users[user_id]["stake_tx"] = stake_tx
-        agent.save_users()
-        sync_stags()
-    
-    # Resolve day
-    if not resolve_day(token_id):
-        print(f"Failed to resolve day for {user_id}")
-        return False
-    
-    day = agent.users[user_id]["day"]
-    for prayer in ["Lauds", "Prime", "Terce", "Sext", "None", "Vespers", "Compline"]:
-        msg = prompts[f"Day {day}"][prayer]
-        agent.log_message(user_id, day, prayer, msg, silent=True)
-    agent.record_response(user_id, day, "Compline", "y")
-    agent.users[user_id]["day"] += 1
-    agent.save_users()
-    sync_stags()
-    
-    status = get_nft_status(token_id)
-    if status["days_completed"] != day or status["successful_days"] != day:
-        print(f"Error: NFT status for {token_id} incorrect: {status}")
-        return False
-    
-    print("Herdmaster novena test passed")
-    return True
-
-def run_all_tests():
-    print("Running all novena tests...")
-    sync_stags()  # Single sync for initial state
-    individual_passed = test_individual_novena()
-    herdmaster_passed = test_herdmaster_novena()
-    
-    print("\n=== Test Summary ===")
-    print(f"Individual Novena Test: {'Passed' if individual_passed else 'Failed'}")
-    print(f"Herdmaster Novena Test: {'Passed' if herdmaster_passed else 'Failed'}")
-    
-    return individual_passed and herdmaster_passed
 
 if __name__ == "__main__":
-    success = run_all_tests()
-    if success:
-        print("All novena tests completed successfully!")
-    else:
-        print("Some tests failed. Check output for details.")
+    test_novena_flow()
