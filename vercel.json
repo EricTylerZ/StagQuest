@@ -2,18 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/checkin.py",
+      "src": "app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
+      "src": "/api/mint",
+      "dest": "app.py"
+    },
+    {
+      "src": "/api/novena",
+      "dest": "app.py"
+    },
+    {
       "src": "/api/checkin",
-      "dest": "api/checkin.py"
+      "dest": "app.py"
     },
     {
       "src": "/",
-      "dest": "api/checkin.py"
+      "dest": "app.py"
     }
   ]
 }
