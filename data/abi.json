@@ -18,10 +18,21 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "becomeHerdMaster",
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"name": "checkIn",
 		"outputs": [],
-		"stateMutability": "payable",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -29,11 +40,6 @@
 			{
 				"internalType": "address",
 				"name": "initialRegenAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_novenaProcessor",
 				"type": "address"
 			}
 		],
@@ -165,19 +171,6 @@
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "mint",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -254,18 +247,94 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "success",
+				"type": "bool"
+			}
+		],
+		"name": "DayResolved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "newSize",
+				"type": "uint8"
+			}
+		],
+		"name": "FamilySizeUp",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "mintStag",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "successfulDays",
+				"type": "uint8"
+			}
+		],
+		"name": "NovenaCompleted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
 				"internalType": "address",
 				"name": "user",
 				"type": "address"
 			},
 			{
 				"indexed": false,
-				"internalType": "bool",
-				"name": "status",
-				"type": "bool"
+				"internalType": "uint256",
+				"name": "stake",
+				"type": "uint256"
 			}
 		],
-		"name": "HerdMasterStatusChanged",
+		"name": "NovenaStarted",
 		"type": "event"
 	},
 	{
@@ -366,24 +435,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "herdMaster",
-				"type": "address"
-			},
-			{
-				"internalType": "bool",
-				"name": "status",
-				"type": "bool"
-			}
-		],
-		"name": "setHerdMaster",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "uint256",
 				"name": "newFee",
 				"type": "uint256"
@@ -397,12 +448,25 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "newStake",
+				"type": "uint256"
+			}
+		],
+		"name": "setMinNovenaStake",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
-				"name": "newProcessor",
+				"name": "newOracle",
 				"type": "address"
 			}
 		],
-		"name": "setNovenaProcessor",
+		"name": "setOracle",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -418,6 +482,19 @@
 		"name": "setRegenAddress",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "stagId",
+				"type": "uint256"
+			}
+		],
+		"name": "startNovena",
+		"outputs": [],
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
@@ -501,7 +578,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "withdraw",
+		"name": "withdrawOwnerFunds",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -511,6 +588,25 @@
 		"name": "withdrawPending",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "activeStakes",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -536,6 +632,44 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "daysCompleted",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "familySize",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
 			}
@@ -546,6 +680,25 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "hasActiveNovena",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -576,19 +729,13 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "isHerdMaster",
+		"inputs": [],
+		"name": "minMintFee",
 		"outputs": [
 			{
-				"internalType": "bool",
+				"internalType": "uint256",
 				"name": "",
-				"type": "bool"
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -596,7 +743,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "minMintFee",
+		"name": "minNovenaStake",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -635,7 +782,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "novenaProcessor",
+		"name": "oracle",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -654,19 +801,6 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "OWNER_COMMISSION",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
 			}
 		],
 		"stateMutability": "view",
@@ -718,6 +852,25 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "successfulDays",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
 			}
 		],
 		"stateMutability": "view",
