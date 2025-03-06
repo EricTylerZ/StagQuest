@@ -25,8 +25,8 @@ def checkin():
     if not stag_id or not isinstance(stag_id, int):
         return jsonify({"error": "Invalid or missing stagId"}), 400
 
-    # Simulate success for now (replace with real logic later)
-    success = True  # Will be updated based on your needs (e.g., Twilio response)
+    # Simulate success for now (replace with real logic later, e.g., Twilio)
+    success = True  # Will be updated based on your needs
 
     # Build and send transaction using oracle credentials
     nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
@@ -43,4 +43,4 @@ def checkin():
     return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    app.run(host="0.0.0.0", port=5000)

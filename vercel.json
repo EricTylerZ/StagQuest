@@ -2,18 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/simple_app.py",
+      "src": "api/checkin.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/api/checkin",
-      "dest": "src/simple_app.py"
-    },
-    {
-      "src": "/",
-      "dest": "src/simple_app.py"
+      "dest": "api/checkin.py"
     }
   ]
 }
