@@ -1,19 +1,20 @@
+# vercel.json
 {
   "version": 2,
   "builds": [
     {
-      "src": "simple_app.py",
+      "src": "src/simple_app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/api/checkin",
-      "dest": "simple_app.py"
+      "dest": "src/simple_app.py"
     },
     {
       "src": "/",
-      "dest": "simple_app.py"
+      "dest": "src/simple_app.py"
     }
   ]
 }
