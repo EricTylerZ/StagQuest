@@ -42,5 +42,9 @@ def checkin():
 
     return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
 
+@app.route("/", methods=["GET"])
+def home():
+    return "StagQuest Oracle API", 200
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

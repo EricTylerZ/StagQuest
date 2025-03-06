@@ -10,6 +10,10 @@
     {
       "src": "/api/checkin",
       "dest": "api/checkin.py"
+    },
+    {
+      "src": "/",
+      "dest": "api/checkin.py"
     }
   ]
 }
