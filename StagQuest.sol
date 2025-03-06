@@ -46,7 +46,7 @@ contract StagQuest is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     // Start a 9-day novena, user stakes ETH
     function startNovena(uint256 stagId) external payable {
-        require(ownerOf(stagId) == msg.sender, "You don’t own this stag");
+        require(ownerOf(stagId) == msg.sender, "You don't own this stag");
         require(!hasActiveNovena[stagId], "This stag already has an active novena");
         require(msg.value >= minNovenaStake, "Stake below minimum required");
 
@@ -126,7 +126,7 @@ contract StagQuest is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     // Transfer a stag (only if no active novena)
     function transferStag(uint256 stagId, address to) external {
-        require(ownerOf(stagId) == msg.sender, "You don’t own this stag");
+        require(ownerOf(stagId) == msg.sender, "You don't own this stag");
         require(!hasActiveNovena[stagId], "Cannot transfer a stag with active novena");
         transferFrom(msg.sender, to, stagId);
     }
