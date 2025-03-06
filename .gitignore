@@ -20,3 +20,4 @@ docs/*.txt
 # Other common ignores (optional but recommended)
 *.log
 *.bak
+.vercel
