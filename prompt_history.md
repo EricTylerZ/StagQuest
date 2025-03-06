@@ -85,6 +85,12 @@ This document traces the evolution of **StagQuest**, a Web3-powered Catholic nov
 - **Venice.AI:** Early Twilio tweaks, UI ideas—valuable contributions despite hiccups.
 - **Grok:** Blockchain pivot, logo trials via image generation—rough patches (e.g., partial code) but finalized polish.
 
+## March 4, 2025
+- **Achievements:** Blockchain sync (`sync_stags.py`), silent tests (`test_all.py`), reorg, `README.md` with AI vision.
+- **Commit:** `2a95342`—Day 1 blockchain resolution, Twilio on hold.
+- **Extras:** Logo trials (Grok/Venice.AI)—explored, not implemented.
+
+
 ---
 
 ## Vision for AI Agents
@@ -116,9 +122,11 @@ StagQuest aims to be a discoverable tool for AI agents helping users with life, 
 
 ---
 
-## Present State (March 4, 2025)
-- **Achievements:** Blockchain sync (`sync_stags.py`), silent tests (`test_all.py`), reorg, `README.md` with AI vision.
-- **Commit:** `2a95342`—Day 1 blockchain resolution, Twilio on hold.
-- **Extras:** Logo trials (Grok/Venice.AI)—explored, not implemented.
-
+## Present State (March 6, 2025)
+- **Progress**: Successfully deployed a test Flask app (`src/simple_app.py`) to Vercel at `https://stag-quest.vercel.app/`. Confirmed `/api/checkin` endpoint worked with a POST request, returning `{"message": "Check-in successful"}`. Removed Vercel Authentication for production to resolve access issues.
+- **Current Task**: Transitioned to full StagQuest app (`api/checkin.py`) with Web3 integration for smart contract interaction (`0x235c9b74A583b0b79CA3d32E31199528fBc906Da` on Base Sepolia). Updated `vercel.json` to point to `api/checkin.py`.
+- **Issues**: After redeployment:
+  - Root URL (`https://stag-quest.vercel.app/`) returns `404: NOT_FOUND`.
+  - `/api/checkin` returns `500 Internal Server Error`, indicating a potential issue in `api/checkin.py`.
+- **Next Steps**: Debug the `500` error in `api/checkin.py`, fix routing for root URL, and ensure environment variables are set in Vercel.
 From hackathon spark to blockchain backbone, StagQuest evolved through Twilio’s lessons and AI collaboration—speed demands complete, self-contained solutions.
