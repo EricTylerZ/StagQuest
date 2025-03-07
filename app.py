@@ -39,25 +39,40 @@ except Exception as e:
     contracts = {"a": None, "b": None}
 
 def update_github_file(content, version="a"):
+    """Update or create the status file in GitHub repo."""
     if not GITHUB_TOKEN:
         app.logger.error("GITHUB_TOKEN not set")
         return False
+    
     file_path = CONTRACTS[version]["status_file"]
     api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
+    # Check if file exists and get its SHA
     get_response = requests.get(api_url, headers=headers)
     sha = get_response.json().get("sha") if get_response.status_code == 200 else None
-    payload = {"message": f"Update {file_path} from /api/status", "content": "", "branch": "main"}
+    
+    # Prepare payload
+    payload = {
+        "message": f"Update or create {file_path} from /api/status",
+        "content": "",
+        "branch": "main"
+    }
     if sha:
-        payload["sha"] = sha
+        payload["sha"] = sha  # Update existing file
+    
+    # Encode content to base64
     import base64
     payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
+    
+    # Create or update file
     response = requests.put(api_url, headers=headers, json=payload)
     if response.status_code in [200, 201]:
-        app.logger.info(f"Updated {file_path}: {response.status_code}")
+        app.logger.info(f"Successfully updated/created {file_path}: {response.status_code}")
         return True
-    app.logger.error(f"Failed to update GitHub: {response.status_code} - {response.text}")
-    return False
+    else:
+        app.logger.error(f"Failed to update/create {file_path}: {response.status_code} - {response.text}")
+        return False
 
 def get_contract(version="a"):
     version = version.lower()
@@ -203,7 +218,7 @@ def status():
                 app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
                 continue
         sync_success = False
-        if stags:
+        if stags or not stags:  # Always sync, even if empty, to create file
             sync_success = update_github_file({"stags": stags}, version)
         response = {"stags": stags}
         if not sync_success:
