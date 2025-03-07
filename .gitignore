@@ -21,3 +21,8 @@ docs/*.txt
 *.log
 *.bak
 .vercel
+
+#node stuff
+node_modules/
+package-lock.json
+package.json

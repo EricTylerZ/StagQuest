@@ -2,5 +2,5 @@ flask>=3.0.0
 werkzeug>=3.0.4
 requests>=2.32.3
 packaging>=23.1
-web3
+web3 >=6.15.1 # Minimum version for raw_transaction
 python-dotenv
