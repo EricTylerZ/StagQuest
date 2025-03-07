@@ -1,0 +1,11 @@
+{
+  "stags": [
+    {
+      "tokenId": 1,
+      "owner": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813",
+      "familySize": 0,
+      "hasActiveNovena": false,
+      "successfulDays": 0
+    }
+  ]
+}
