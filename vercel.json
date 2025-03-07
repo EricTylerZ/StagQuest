@@ -9,11 +9,11 @@
   "routes": [
     {"src": "/api/mint", "dest": "app.py"},
     {"src": "/api/novena", "dest": "app.py"},
-    {"src": "/api/checkin", "dest": "app.py"},
+    {"src": "/api/complete-novena", "dest": "app.py"},
+    {"src": "/api/batch-complete-novena", "dest": "app.py"},
+    {"src": "/api/transfer", "dest": "app.py"},
     {"src": "/api/status", "dest": "app.py"},
-    {"src": "/api/sync-status", "dest": "app.py"},
     {"src": "/api/owner-withdraw", "dest": "app.py"},
-    {"src": "/api/user-withdraw", "dest": "app.py"},
     {"src": "/", "dest": "app.py"}
   ]
 }

@@ -6,7 +6,7 @@ import json
 from flask import Flask, request, jsonify
 from web3 import Web3
 from src.config import w3, CONTRACT_ADDRESS_C, OWNER_ADDRESS, OWNER_PRIVATE_KEY
-from time import time  # Added for cache-busting
+from time import time
 
 app = Flask(__name__)
 
@@ -17,7 +17,6 @@ CONTRACTS = {
     "c": {"address": CONTRACT_ADDRESS_C, "status_file": "data/stag_status_c.json"}
 }
 
-# Updated ABI_URL with cache-busting timestamp
 ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/version-c/data/abi.json?t={int(time())}"
 
 def load_json_from_url(url):
