@@ -5,152 +5,148 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-// StagQuest: A contract to help users overcome addiction, build virtue, and fight human trafficking
-// Users mint Stag (Cervus) NFTs, stake ETH for a 9-day novena, and aim to stay porn-free
-// Success grows the stag’s family (Cervus -> Cerva -> Cervulus); failures donate to anti-trafficking
-// FamilySize: 0 = lone Cervus, 1 = Cervus + Cerva, 2 = Cervus + Cerva + Cervulus, 3 = Cervus + Cerva + 2 Cervuli, etc.
-// An off-chain oracle (bot) reports daily success after 7 messages, users report to it, not the contract
+/**
+ * @title StagQuest - A Simplified Novena Tracking NFT Contract
+ * @notice This contract helps users grow in virtue and family life by tracking novenas via Stag NFTs.
+ *         Users or the owner mint Stags with optional ETH commitments to signal dedication to breaking
+ *         addictions (e.g., pornography) and supporting pro-life family causes. The owner completes
+ *         novenas, upgrading familySize on 9/9 success, and logs successful days for AI analysis.
+ *         Stags use standard ERC721 transfers for interoperability (e.g., claiming by new Web3 users).
+ * @dev Deployed on Base Sepolia, uses ERC721Enumerable for NFT tracking and standard transfers.
+ */
 contract StagQuest is ERC721Enumerable, Ownable, ReentrancyGuard {
-    uint256 public nextTokenId = 1;           // Next ID for minting new NFTs
-    uint256 public minMintFee = 0.0001 ether; // Minimum fee to mint a Cervus
-    uint256 public minNovenaStake = 0.0009 ether; // Minimum stake for a novena
-    address public regenAddress;              // Address for anti-trafficking donations
-    address public oracle;                    // Oracle address for reporting success
+    // @notice Tracks the next available token ID for minting new Stags.
+    uint256 public nextTokenId = 1;
 
-    mapping(uint256 => uint8) public familySize;     // 0 = Cervus, 1 = +Cerva, 2 = +Cervulus, etc.
-    mapping(uint256 => uint256) public activeStakes; // ETH staked for a novena
-    mapping(uint256 => uint8) public daysCompleted;  // Days completed in current novena (0-9)
-    mapping(uint256 => uint8) public successfulDays; // Successful days in current novena (0-9)
-    mapping(uint256 => bool) public hasActiveNovena; // Active novena flag
-    mapping(address => uint256) public pendingWithdrawals; // Withdrawable funds
+    // @notice Minimum fee (0.0001 ETH) to mint a Stag; users can pay more to signal commitment.
+    // @dev Funds owner gas costs (~0.001 ETH/novena completion); withdrawn to sustain operations.
+    uint256 public minMintFee = 0.0001 ether;
 
-    event NovenaStarted(uint256 indexed stagId, address indexed user, uint256 stake);
-    event DayResolved(uint256 indexed stagId, bool success);
+    // @notice Maps each Stag (tokenId) to its family size, symbolizing growth in virtue and family commitment.
+    // @dev Starts at 0, increments by 1 only on a perfect 9/9 novena, max 255 (uint8 limit).
+    mapping(uint256 => uint8) public familySize;
+
+    // @notice Tracks whether a Stag has an active novena in progress.
+    // @dev True when started, False when inactive or completed; no daily updates—owner resolves all.
+    mapping(uint256 => bool) public hasActiveNovena;
+
+    // @notice Stores the number of successful days (0-9) from the last completed novena.
+    // @dev Reset to 0 on start, updated on completion, logged in events for AI to trend progress over time.
+    mapping(uint256 => uint8) public successfulDays;
+
+    // @notice Emitted when a novena begins, signaling a user’s commitment to 9 days of growth.
+    // @param stagId The Stag NFT starting the novena.
+    // @param user The Stag’s owner, committed to virtue (e.g., purity, family restoration).
+    // @param amount Optional ETH donated, reflecting dedication level for AI to note.
+    event NovenaStarted(uint256 indexed stagId, address indexed user, uint256 amount);
+
+    // @notice Emitted when a novena ends, logging success for AI encouragement and blockchain tracking.
+    // @param stagId The Stag NFT completing the novena.
+    // @param successfulDays Days succeeded (0-9), 9/9 required for familySize upgrade.
     event NovenaCompleted(uint256 indexed stagId, uint8 successfulDays);
+
+    // @notice Emitted when a Stag’s familySize increases, celebrating a perfect 9/9 novena.
+    // @param stagId The Stag NFT upgraded.
+    // @param newSize The new familySize, symbolizing growth in virtue or family life.
     event FamilySizeUp(uint256 indexed stagId, uint8 newSize);
 
-    constructor(address initialRegenAddress) ERC721("StagQuest", "STQ") Ownable(msg.sender) {
-        require(initialRegenAddress != address(0), "Regen address cannot be zero");
-        regenAddress = initialRegenAddress;
-        oracle = msg.sender; // Initially owner; update to bot later
-    }
+    /**
+     * @notice Initializes the contract with the deployer as owner, managing all novena actions.
+     */
+    constructor() ERC721("StagQuest", "STQ") Ownable(msg.sender) {}
 
-    // Mint a new Stag (Cervus) NFT
+    /**
+     * @notice Mints a new Stag NFT, starting a user’s journey toward virtue and family growth.
+     * @dev Users pay a minimum fee (0.0001 ETH) or more to signal commitment; funds owner operations.
+     *      Owner can mint for non-Web3 users, transferring later via standard ERC721 transferFrom.
+     * @return stagId The newly minted Stag’s token ID.
+     */
     function mintStag() external payable returns (uint256) {
         require(msg.value >= minMintFee, "Payment below minimum mint fee");
         uint256 stagId = nextTokenId++;
         _mint(msg.sender, stagId);
         familySize[stagId] = 0;
+        successfulDays[stagId] = 0;
         return stagId;
     }
 
-    // Start a 9-day novena, user stakes ETH
+    /**
+     * @notice Starts a novena for a Stag, with optional ETH to signal commitment.
+     * @dev Callable by the Stag’s owner or contract owner (for non-Web3 users); ETH funds operations.
+     * @param stagId The Stag NFT to begin the novena for.
+     */
     function startNovena(uint256 stagId) external payable {
-        require(ownerOf(stagId) == msg.sender, "You don't own this stag");
+        require(ownerOf(stagId) == msg.sender || msg.sender == owner(), "Must be owner or contract owner");
         require(!hasActiveNovena[stagId], "This stag already has an active novena");
-        require(msg.value >= minNovenaStake, "Stake below minimum required");
-
-        activeStakes[stagId] = msg.value;
         hasActiveNovena[stagId] = true;
-        daysCompleted[stagId] = 0;
-        successfulDays[stagId] = 0;
-        emit NovenaStarted(stagId, msg.sender, msg.value);
+        successfulDays[stagId] = 0;  // Reset for new novena
+        emit NovenaStarted(stagId, ownerOf(stagId), msg.value);
     }
 
-    // Oracle reports daily success (1 check-in per day, after 7 off-chain messages)
-    function checkIn(uint256 stagId, bool success) external {
-        require(msg.sender == oracle, "Only oracle can report success");
+    /**
+     * @notice Completes a Stag’s novena, logging success and upgrading familySize if 9/9.
+     * @dev Only the contract owner calls this, reporting total successful days (0-9) based on off-chain tracking.
+     * @param stagId The Stag NFT to complete.
+     * @param successfulDaysCount Number of days the user succeeded (0-9), 9 required for upgrade.
+     */
+    function completeNovena(uint256 stagId, uint8 successfulDaysCount) external onlyOwner {
         require(hasActiveNovena[stagId], "No active novena for this stag");
-        require(daysCompleted[stagId] < 9, "Novena already completed");
+        require(successfulDaysCount <= 9, "Successful days cannot exceed 9");
 
-        daysCompleted[stagId] += 1;
-        if (success) {
-            successfulDays[stagId] += 1;
-        }
-        emit DayResolved(stagId, success);
-
-        if (daysCompleted[stagId] == 9) {
-            _resolveNovena(stagId);
-        }
-    }
-
-    // Resolve novena: 9/10ths to user on full success (1/10th per day), 1/10th to oracle
-    function _resolveNovena(uint256 stagId) internal {
         hasActiveNovena[stagId] = false;
-        uint256 stake = activeStakes[stagId];
-        activeStakes[stagId] = 0;
-        uint8 successes = successfulDays[stagId];
-        emit NovenaCompleted(stagId, successes);
+        successfulDays[stagId] = successfulDaysCount;  // Log for trending
 
-        address stagOwner = ownerOf(stagId);
-        uint256 oracleCut = stake / 10; // 1/10th of total stake to oracle
-        if (successes == 9) {
-            // Full success: 9/10ths to user, 1/10th to oracle
-            require(familySize[stagId] < 255, "Family size at maximum (255)");
-            pendingWithdrawals[stagOwner] += (stake * 9) / 10; // 90% back
-            pendingWithdrawals[oracle] += oracleCut;           // 10% fee
+        if (successfulDaysCount == 9) {
+            require(familySize[stagId] < 255, "Family size at maximum");
             familySize[stagId] += 1;
             emit FamilySizeUp(stagId, familySize[stagId]);
-        } else {
-            // Partial success: 1/10th per success to user, 1/10th per fail to regen, 1/10th to oracle
-            uint256 failedDays = 9 - successes;
-            uint256 toRegen = (stake / 10) * failedDays;     // Failed portion to regen
-            uint256 toUser = (stake / 10) * successes;       // Success portion to user
-            pendingWithdrawals[regenAddress] += toRegen;
-            pendingWithdrawals[stagOwner] += toUser;
-            pendingWithdrawals[oracle] += oracleCut;         // Oracle gets 1/10th regardless
         }
-
-        daysCompleted[stagId] = 0;
-        successfulDays[stagId] = 0;
+        emit NovenaCompleted(stagId, successfulDaysCount);
     }
 
-    // Withdraw pending funds
-    function withdrawPending() external nonReentrant {
-        uint256 amount = pendingWithdrawals[msg.sender];
-        require(amount > 0, "No funds available to withdraw");
-        pendingWithdrawals[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
+    /**
+     * @notice Completes multiple Stags’ novenas in one transaction, optimizing gas costs.
+     * @dev Owner uses this for efficiency (e.g., ~0.001 ETH for 5 completions vs. 0.0025 ETH individually).
+     * @param stagIds Array of Stag NFTs to complete.
+     * @param successes Array of successful days (0-9) per Stag, must match stagIds length.
+     */
+    function batchCompleteNovena(uint256[] calldata stagIds, uint8[] calldata successes) external onlyOwner {
+        require(stagIds.length == successes.length, "Array lengths must match");
+
+        for (uint256 i = 0; i < stagIds.length; i++) {
+            uint256 stagId = stagIds[i];
+            uint8 successfulDaysCount = successes[i];
+            require(hasActiveNovena[stagId], "No active novena for this stag");
+            require(successfulDaysCount <= 9, "Successful days cannot exceed 9");
+
+            hasActiveNovena[stagId] = false;
+            successfulDays[stagId] = successfulDaysCount;
+
+            if (successfulDaysCount == 9) {
+                require(familySize[stagId] < 255, "Family size at maximum");
+                familySize[stagId] += 1;
+                emit FamilySizeUp(stagId, familySize[stagId]);
+            }
+            emit NovenaCompleted(stagId, successfulDaysCount);
+        }
     }
 
-    // Owner withdraws uncommitted funds (e.g., mint fees)
+    /**
+     * @notice Withdraws accumulated mint fees and novena donations to fund owner operations.
+     * @dev Ensures owner can sustain gas costs (~0.0005 ETH/completion, ~0.001 ETH/batch).
+     */
     function withdrawOwnerFunds() external onlyOwner nonReentrant {
-        uint256 lockedStakes = 0;
-        for (uint256 i = 1; i < nextTokenId; i++) {
-            lockedStakes += activeStakes[i];
-        }
-        uint256 available = address(this).balance - lockedStakes;
-        require(available > 0, "No funds available to withdraw");
-        payable(owner()).transfer(available);
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds available to withdraw");
+        payable(owner()).transfer(balance);
     }
 
-    // Transfer a stag (only if no active novena)
-    function transferStag(uint256 stagId, address to) external {
-        require(ownerOf(stagId) == msg.sender, "You don't own this stag");
-        require(!hasActiveNovena[stagId], "Cannot transfer a stag with active novena");
-        transferFrom(msg.sender, to, stagId);
-    }
-
-    // Owner adjusts minimum fees
-    function setMinMintFee(uint256 newFee) external onlyOwner {
-        require(newFee > 0, "Mint fee must be positive");
+    /**
+     * @notice Adjusts the minimum mint fee to balance accessibility and funding.
+     * @dev Owner can lower (e.g., 0 ETH) or raise based on gas needs.
+     * @param newFee The new minimum mint fee in wei.
+     */
+    function setMintFee(uint256 newFee) external onlyOwner {
         minMintFee = newFee;
-    }
-
-    function setMinNovenaStake(uint256 newStake) external onlyOwner {
-        require(newStake > 0, "Novena stake must be positive");
-        minNovenaStake = newStake;
-    }
-
-    // Owner updates regen address
-    function setRegenAddress(address newRegenAddress) external onlyOwner {
-        require(newRegenAddress != address(0), "Regen address cannot be zero");
-        regenAddress = newRegenAddress;
-    }
-
-    // Owner updates oracle address
-    function setOracle(address newOracle) external onlyOwner {
-        require(newOracle != address(0), "Oracle address cannot be zero");
-        oracle = newOracle;
     }
 }
