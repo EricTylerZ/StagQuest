@@ -1,4 +1,4 @@
-# scripts/check_novena_status.py (updated)
+# scripts/check_novena_status.py
 import requests
 import json
 import subprocess
@@ -43,19 +43,19 @@ def suggest_action(stag_a, stag_b):
                     "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=b' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
                     "description": f"Check in Stag {stag_id} on Version B"
                 })
-    
-    # Complete novenas if aligned
-    if stag_a["hasActiveNovena"] and stag_b["hasActiveNovena"] and stag_a["daysCompleted"] == stag_b["daysCompleted"]:
-        remaining = 9 - stag_a["daysCompleted"]
-        for _ in range(remaining):
-            actions.append({
-                "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=a' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
-                "description": f"Check in Stag {stag_id} on Version A (to complete)"
-            })
-            actions.append({
-                "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=b' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
-                "description": f"Check in Stag {stag_id} on Version B (to complete)"
-            })
+        
+        # Complete novenas if aligned
+        if stag_a["daysCompleted"] == stag_b["daysCompleted"]:
+            remaining = 9 - stag_a["daysCompleted"]
+            for _ in range(remaining):
+                actions.append({
+                    "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=a' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
+                    "description": f"Check in Stag {stag_id} on Version A (to complete)"
+                })
+                actions.append({
+                    "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=b' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
+                    "description": f"Check in Stag {stag_id} on Version B (to complete)"
+                })
     
     return actions
 
@@ -105,12 +105,11 @@ def main():
                     print(f"Executing: {action['description']}")
                     subprocess.run(["powershell", "-Command", action["command"]], shell=True)
                     time.sleep(10)
-                # Withdraw after completion
-                for stag_a in status_a["stags"]:
-                    if not stag_a["hasActiveNovena"]:
+                # Withdraw only for completed novenas
+                for stag_a, stag_b in zip(status_a["stags"], status_b["stags"]):
+                    if stag_a["hasActiveNovena"] == False and stag_a["daysCompleted"] > 0:
                         withdraw("a", stag_a["tokenId"])
-                for stag_b in status_b["stags"]:
-                    if not stag_b["hasActiveNovena"]:
+                    if stag_b["hasActiveNovena"] == False and stag_b["daysCompleted"] > 0:
                         withdraw("b", stag_b["tokenId"])
                 print("\nRe-checking status:")
                 main()
