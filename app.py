@@ -31,17 +31,17 @@ def mint():
 
     try:
         nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
-        mint_fee = w3.to_wei("0.0001", "ether")  # Matches minMintFee
+        mint_fee = w3.to_wei("0.0001", "ether")
         tx = contract.functions.mintStag().build_transaction({
             "from": ORACLE_ADDRESS,
             "value": mint_fee,
             "nonce": nonce,
             "gas": 200000,
             "gasPrice": w3.to_wei("2.5", "gwei"),
-            "chainId": 84532  # Base Sepolia
+            "chainId": 84532
         })
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Updated to raw_transaction
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt.status == 1:
@@ -76,7 +76,7 @@ def start_novena():
             return jsonify({"error": f"Stag {stag_id} already has an active novena"}), 400
 
         nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
-        stake = w3.to_wei("0.0009", "ether")  # Matches minNovenaStake
+        stake = w3.to_wei("0.0009", "ether")
         tx = contract.functions.startNovena(stag_id).build_transaction({
             "from": ORACLE_ADDRESS,
             "value": stake,
@@ -86,7 +86,7 @@ def start_novena():
             "chainId": 84532
         })
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Updated to raw_transaction
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt.status == 1:
@@ -124,7 +124,7 @@ def checkin():
             "chainId": 84532
         })
         signed_txn = w3.eth.account.sign_transaction(txn, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)  # Updated to raw_transaction
+        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt.status == 1:
@@ -133,6 +133,44 @@ def checkin():
             return jsonify({"error": "Check-in failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Check-in failed for stagId {stag_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/status", methods=["GET"])
+def status():
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
+
+    try:
+        # Get total supply of Stags
+        total_supply = contract.functions.totalSupply().call()
+        stags = []
+
+        # Loop through all token IDs (assuming they start at 1 and are sequential)
+        for token_id in range(1, total_supply + 1):
+            try:
+                owner = contract.functions.ownerOf(token_id).call()
+                family_size = contract.functions.familySize(token_id).call()
+                has_novena = contract.functions.hasActiveNovena(token_id).call()
+                days_completed = contract.functions.daysCompleted(token_id).call()
+                successful_days = contract.functions.successfulDays(token_id).call()
+                stake = contract.functions.activeStakes(token_id).call()
+
+                stags.append({
+                    "tokenId": token_id,
+                    "owner": owner,
+                    "familySize": family_size,
+                    "hasActiveNovena": has_novena,
+                    "daysCompleted": days_completed,
+                    "successfulDays": successful_days,
+                    "stake": w3.from_wei(stake, "ether")  # Convert to ETH for readability
+                })
+            except Exception as e:
+                app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
+                continue  # Skip invalid token IDs
+
+        return jsonify({"stags": stags}), 200
+    except Exception as e:
+        app.logger.error(f"Status fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/", methods=["GET"])
