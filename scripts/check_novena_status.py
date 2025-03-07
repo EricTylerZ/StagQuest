@@ -1,4 +1,4 @@
-# scripts/check_novena_status.py
+# scripts/check_novena_status.py (updated)
 import requests
 import json
 import subprocess
@@ -44,7 +44,32 @@ def suggest_action(stag_a, stag_b):
                     "description": f"Check in Stag {stag_id} on Version B"
                 })
     
+    # Complete novenas if aligned
+    if stag_a["hasActiveNovena"] and stag_b["hasActiveNovena"] and stag_a["daysCompleted"] == stag_b["daysCompleted"]:
+        remaining = 9 - stag_a["daysCompleted"]
+        for _ in range(remaining):
+            actions.append({
+                "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=a' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
+                "description": f"Check in Stag {stag_id} on Version A (to complete)"
+            })
+            actions.append({
+                "command": f"Invoke-RestMethod -Uri '{BASE_URL}/checkin?version=b' -Method Post -Body (@{{ stagId = {stag_id} }} | ConvertTo-Json) -ContentType 'application/json'",
+                "description": f"Check in Stag {stag_id} on Version B (to complete)"
+            })
+    
     return actions
+
+def withdraw(version, stag_id):
+    body = json.dumps({"userAddress": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813"})
+    result = subprocess.run([
+        "powershell",
+        "-Command",
+        f"Invoke-RestMethod -Uri '{BASE_URL}/user-withdraw?version={version}' -Method Post -Body '{body}' -ContentType 'application/json'"
+    ], capture_output=True, text=True, shell=True)
+    print(f"Withdraw Version {version} for Stag {stag_id}:")
+    print(result.stdout)
+    if result.stderr:
+        print(f"Error: {result.stderr}")
 
 def main():
     status_a = fetch_status("a")
@@ -62,13 +87,14 @@ def main():
         
         if (stag_a["hasActiveNovena"] != stag_b["hasActiveNovena"] or
             stag_a["daysCompleted"] != stag_b["daysCompleted"] or
-            stag_a["successfulDays"] != stag_b["successfulDays"]):
-            print("  (DIFFERENT)")
+            stag_a["successfulDays"] != stag_b["successfulDays"] or
+            (stag_a["hasActiveNovena"] and stag_a["daysCompleted"] < 9)):
+            print("  (DIFFERENT or INCOMPLETE)")
             actions = suggest_action(stag_a, stag_b)
             actions_queue.extend(actions)
     
     if actions_queue:
-        print("\nSuggested Actions to Align Novenas:")
+        print("\nSuggested Actions to Align and Complete Novenas:")
         for i, action in enumerate(actions_queue, 1):
             print(f"{i}. {action['description']}")
         
@@ -78,9 +104,16 @@ def main():
                 for action in actions_queue:
                     print(f"Executing: {action['description']}")
                     subprocess.run(["powershell", "-Command", action["command"]], shell=True)
-                    time.sleep(10)  # Wait for tx confirmation
-                print("\nRe-checking status after alignment:")
-                main()  # Recursively re-run
+                    time.sleep(10)
+                # Withdraw after completion
+                for stag_a in status_a["stags"]:
+                    if not stag_a["hasActiveNovena"]:
+                        withdraw("a", stag_a["tokenId"])
+                for stag_b in status_b["stags"]:
+                    if not stag_b["hasActiveNovena"]:
+                        withdraw("b", stag_b["tokenId"])
+                print("\nRe-checking status:")
+                main()
                 break
             elif confirm == "no":
                 print("No actions executed.")
@@ -88,7 +121,7 @@ def main():
             else:
                 print("Invalid input. Please enter 'yes', 'y', or 'no'.")
     else:
-        print("\nNo differences found—novena statuses are aligned.")
+        print("\nNo differences or incomplete novenas—statuses aligned and completed.")
 
 if __name__ == "__main__":
     main()
