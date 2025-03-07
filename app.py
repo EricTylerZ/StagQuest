@@ -80,7 +80,7 @@ def mint():
             "from": OWNER_ADDRESS,
             "value": w3.to_wei(amount, "ether"),
             "nonce": nonce,
-            "gas": 100000,
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -119,7 +119,7 @@ def start_novena():
             "from": OWNER_ADDRESS,
             "value": w3.to_wei(amount, "ether"),
             "nonce": nonce,
-            "gas": 100000,
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -150,7 +150,7 @@ def complete_novena():
         txn = contract.functions.completeNovena(stag_id, successful_days).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 100000,
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -181,7 +181,7 @@ def batch_complete_novena():
         txn = contract.functions.batchCompleteNovena(stag_ids, successes).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 200000,
+            "gas": 5000000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -212,7 +212,7 @@ def transfer():
         tx = contract.functions.transferFrom(OWNER_ADDRESS, to_address, stag_id).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 100000,
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
