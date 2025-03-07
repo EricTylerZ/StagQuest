@@ -205,7 +205,7 @@ def status():
                     "hasActiveNovena": has_novena,
                     "daysCompleted": days_completed,
                     "successfulDays": successful_days,
-                    "stake": w3.from_wei(stake, "ether")
+                    "stake": str(w3.from_wei(stake, "ether"))  # Convert Decimal to string
                 }
                 stags.append(stag_data)
             except Exception as e:
