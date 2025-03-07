@@ -2,11 +2,18 @@
 import os
 import sys
 import requests
+import json
 from flask import Flask, request, jsonify
 from web3 import Web3
 from src.config import w3, CONTRACT_ADDRESS, ORACLE_ADDRESS, ORACLE_PRIVATE_KEY
 
 app = Flask(__name__)
+
+# GitHub configuration
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO = "EricTylerZ/StagQuest"
+GITHUB_FILE_PATH = "data/stag_status.json"
+GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
 
 # Load ABI from GitHub
 ABI_URL = "https://raw.githubusercontent.com/EricTylerZ/StagQuest/main/data/abi.json"
@@ -23,6 +30,43 @@ try:
 except Exception as e:
     app.logger.error(f"Failed to load ABI: {e}")
     contract = None
+
+def update_github_file(content):
+    """Update stag_status.json in GitHub repo."""
+    if not GITHUB_TOKEN:
+        app.logger.error("GITHUB_TOKEN not set in environment variables")
+        return False
+
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Get current file SHA (if it exists)
+    get_response = requests.get(GITHUB_API_URL, headers=headers)
+    sha = get_response.json().get("sha") if get_response.status_code == 200 else None
+
+    # Prepare update payload
+    payload = {
+        "message": "Update stag_status.json from /api/status",
+        "content": "",
+        "branch": "main"
+    }
+    if sha:
+        payload["sha"] = sha
+
+    # Encode content to base64
+    import base64
+    payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
+
+    # Update file
+    response = requests.put(GITHUB_API_URL, headers=headers, json=payload)
+    if response.status_code in [200, 201]:
+        app.logger.info(f"Successfully updated stag_status.json on GitHub: {response.status_code}")
+        return True
+    else:
+        app.logger.error(f"Failed to update GitHub: {response.status_code} - {response.text}")
+        return False
 
 @app.route("/api/mint", methods=["POST"])
 def mint():
@@ -141,12 +185,11 @@ def status():
         return jsonify({"error": "Contract not initialized"}), 500
 
     try:
-        # Get total supply of Stags
         total_supply = contract.functions.totalSupply().call()
+        next_token_id = contract.functions.nextTokenId().call()
         stags = []
 
-        # Loop through all token IDs (assuming they start at 1 and are sequential)
-        for token_id in range(1, total_supply + 1):
+        for token_id in range(1, next_token_id):
             try:
                 owner = contract.functions.ownerOf(token_id).call()
                 family_size = contract.functions.familySize(token_id).call()
@@ -155,20 +198,29 @@ def status():
                 successful_days = contract.functions.successfulDays(token_id).call()
                 stake = contract.functions.activeStakes(token_id).call()
 
-                stags.append({
+                stag_data = {
                     "tokenId": token_id,
                     "owner": owner,
                     "familySize": family_size,
                     "hasActiveNovena": has_novena,
                     "daysCompleted": days_completed,
                     "successfulDays": successful_days,
-                    "stake": w3.from_wei(stake, "ether")  # Convert to ETH for readability
-                })
+                    "stake": w3.from_wei(stake, "ether")
+                }
+                stags.append(stag_data)
             except Exception as e:
                 app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
-                continue  # Skip invalid token IDs
+                continue
 
-        return jsonify({"stags": stags}), 200
+        # Sync to GitHub
+        sync_success = False
+        if stags:
+            sync_success = update_github_file({"stags": stags})
+
+        response = {"stags": stags}
+        if not sync_success:
+            response["warning"] = "GitHub sync failed - status data not updated in repo"
+        return jsonify(response), 200
     except Exception as e:
         app.logger.error(f"Status fetch failed: {e}")
         return jsonify({"error": str(e)}), 500
