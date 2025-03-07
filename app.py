@@ -274,7 +274,7 @@ def owner_withdraw():
         tx = contract.functions.withdrawOwnerFunds().build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 100000,
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
