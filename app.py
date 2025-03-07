@@ -41,7 +41,7 @@ def mint():
             "chainId": 84532  # Base Sepolia
         })
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Updated to raw_transaction
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt.status == 1:
@@ -86,7 +86,7 @@ def start_novena():
             "chainId": 84532
         })
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Updated to raw_transaction
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt.status == 1:
@@ -124,9 +124,13 @@ def checkin():
             "chainId": 84532
         })
         signed_txn = w3.eth.account.sign_transaction(txn, ORACLE_PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)  # Updated to raw_transaction
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-        return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
+        if receipt.status == 1:
+            return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
+        else:
+            return jsonify({"error": "Check-in failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Check-in failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
