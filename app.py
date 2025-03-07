@@ -5,7 +5,7 @@ import requests
 import json
 from flask import Flask, request, jsonify
 from web3 import Web3
-from src.config import w3, CONTRACT_ADDRESS, ORACLE_ADDRESS, ORACLE_PRIVATE_KEY
+from src.config import w3, CONTRACT_ADDRESS, ORACLE_ADDRESS, ORACLE_PRIVATE_KEY, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 
 app = Flask(__name__)
 
@@ -32,34 +32,20 @@ except Exception as e:
     contract = None
 
 def update_github_file(content):
-    """Update stag_status.json in GitHub repo."""
     if not GITHUB_TOKEN:
         app.logger.error("GITHUB_TOKEN not set in environment variables")
         return False
 
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-
-    # Get current file SHA (if it exists)
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     get_response = requests.get(GITHUB_API_URL, headers=headers)
     sha = get_response.json().get("sha") if get_response.status_code == 200 else None
 
-    # Prepare update payload
-    payload = {
-        "message": "Update stag_status.json from /api/status",
-        "content": "",
-        "branch": "main"
-    }
+    payload = {"message": "Update stag_status.json from /api/status", "content": "", "branch": "main"}
     if sha:
         payload["sha"] = sha
-
-    # Encode content to base64
     import base64
     payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
 
-    # Update file
     response = requests.put(GITHUB_API_URL, headers=headers, json=payload)
     if response.status_code in [200, 201]:
         app.logger.info(f"Successfully updated stag_status.json on GitHub: {response.status_code}")
@@ -72,7 +58,6 @@ def update_github_file(content):
 def mint():
     if not contract:
         return jsonify({"error": "Contract not initialized"}), 500
-
     try:
         nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
         mint_fee = w3.to_wei("0.0001", "ether")
@@ -87,7 +72,6 @@ def mint():
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-
         if receipt.status == 1:
             token_id = None
             for log in receipt["logs"]:
@@ -97,8 +81,7 @@ def mint():
             if token_id:
                 return jsonify({"message": "Stag minted", "tokenId": token_id, "txHash": tx_hash.hex()}), 200
             return jsonify({"error": "Mint succeeded but no tokenId found", "txHash": tx_hash.hex()}), 500
-        else:
-            return jsonify({"error": "Minting failed", "txHash": tx_hash.hex()}), 500
+        return jsonify({"error": "Minting failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Mint failed: {e}")
         return jsonify({"error": str(e)}), 500
@@ -107,18 +90,15 @@ def mint():
 def start_novena():
     if not contract:
         return jsonify({"error": "Contract not initialized"}), 500
-
     data = request.get_json()
     stag_id = data.get("stagId")
     if not stag_id or not isinstance(stag_id, int):
         return jsonify({"error": "Invalid or missing stagId"}), 400
-
     try:
         owner = contract.functions.ownerOf(stag_id).call()
         has_novena = contract.functions.hasActiveNovena(stag_id).call()
         if has_novena:
             return jsonify({"error": f"Stag {stag_id} already has an active novena"}), 400
-
         nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
         stake = w3.to_wei("0.0009", "ether")
         tx = contract.functions.startNovena(stag_id).build_transaction({
@@ -132,11 +112,9 @@ def start_novena():
         signed_tx = w3.eth.account.sign_transaction(tx, ORACLE_PRIVATE_KEY)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-
         if receipt.status == 1:
             return jsonify({"message": f"Novena started for stagId {stag_id}", "txHash": tx_hash.hex()}), 200
-        else:
-            return jsonify({"error": "Novena start failed", "txHash": tx_hash.hex()}), 500
+        return jsonify({"error": "Novena start failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Novena start failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
@@ -145,20 +123,16 @@ def start_novena():
 def checkin():
     if not contract:
         return jsonify({"error": "Contract not initialized"}), 500
-
     data = request.get_json()
     stag_id = data.get("stagId")
     if not stag_id or not isinstance(stag_id, int):
         return jsonify({"error": "Invalid or missing stagId"}), 400
-
     try:
         owner = contract.functions.ownerOf(stag_id).call()
         has_novena = contract.functions.hasActiveNovena(stag_id).call()
         if not has_novena:
             return jsonify({"error": f"No active novena for stagId {stag_id}. Start one first."}), 400
-
-        success = True  # Replace with real logic (e.g., Twilio) later
-
+        success = True  # Replace with real logic later
         nonce = w3.eth.get_transaction_count(ORACLE_ADDRESS)
         txn = contract.functions.checkIn(stag_id, success).build_transaction({
             "from": ORACLE_ADDRESS,
@@ -170,11 +144,9 @@ def checkin():
         signed_txn = w3.eth.account.sign_transaction(txn, ORACLE_PRIVATE_KEY)
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-
         if receipt.status == 1:
             return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
-        else:
-            return jsonify({"error": "Check-in failed", "txHash": tx_hash.hex()}), 500
+        return jsonify({"error": "Check-in failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Check-in failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
@@ -183,12 +155,10 @@ def checkin():
 def status():
     if not contract:
         return jsonify({"error": "Contract not initialized"}), 500
-
     try:
         total_supply = contract.functions.totalSupply().call()
         next_token_id = contract.functions.nextTokenId().call()
         stags = []
-
         for token_id in range(1, next_token_id):
             try:
                 owner = contract.functions.ownerOf(token_id).call()
@@ -197,7 +167,6 @@ def status():
                 days_completed = contract.functions.daysCompleted(token_id).call()
                 successful_days = contract.functions.successfulDays(token_id).call()
                 stake = contract.functions.activeStakes(token_id).call()
-
                 stag_data = {
                     "tokenId": token_id,
                     "owner": owner,
@@ -205,24 +174,72 @@ def status():
                     "hasActiveNovena": has_novena,
                     "daysCompleted": days_completed,
                     "successfulDays": successful_days,
-                    "stake": str(w3.from_wei(stake, "ether"))  # Convert Decimal to string
+                    "stake": str(w3.from_wei(stake, "ether"))
                 }
                 stags.append(stag_data)
             except Exception as e:
                 app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
                 continue
-
-        # Sync to GitHub
         sync_success = False
         if stags:
             sync_success = update_github_file({"stags": stags})
-
         response = {"stags": stags}
         if not sync_success:
             response["warning"] = "GitHub sync failed - status data not updated in repo"
         return jsonify(response), 200
     except Exception as e:
         app.logger.error(f"Status fetch failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/owner-withdraw", methods=["POST"])
+def owner_withdraw():
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
+    try:
+        nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
+        tx = contract.functions.withdrawOwnerFunds().build_transaction({
+            "from": OWNER_ADDRESS,
+            "nonce": nonce,
+            "gas": 200000,
+            "gasPrice": w3.to_wei("2.5", "gwei"),
+            "chainId": 84532
+        })
+        signed_tx = w3.eth.account.sign_transaction(tx, OWNER_PRIVATE_KEY)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        if receipt.status == 1:
+            return jsonify({"message": "Owner funds withdrawn", "txHash": tx_hash.hex()}), 200
+        return jsonify({"error": "Owner withdrawal failed", "txHash": tx_hash.hex()}), 500
+    except Exception as e:
+        app.logger.error(f"Owner withdrawal failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/user-withdraw", methods=["POST"])
+def user_withdraw():
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
+    data = request.get_json()
+    user_address = data.get("userAddress")  # For now, simulate with OWNER_ADDRESS
+    if not user_address:
+        return jsonify({"error": "Missing userAddress"}), 400
+    try:
+        # For testing, use OWNER_ADDRESS; in production, users call via wallet
+        nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
+        tx = contract.functions.withdrawPending().build_transaction({
+            "from": OWNER_ADDRESS,  # Replace with user_address in real scenario
+            "nonce": nonce,
+            "gas": 200000,
+            "gasPrice": w3.to_wei("2.5", "gwei"),
+            "chainId": 84532
+        })
+        signed_tx = w3.eth.account.sign_transaction(tx, OWNER_PRIVATE_KEY)  # Replace with user key
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        if receipt.status == 1:
+            return jsonify({"message": f"Funds withdrawn for {OWNER_ADDRESS}", "txHash": tx_hash.hex()}), 200
+        return jsonify({"error": "User withdrawal failed", "txHash": tx_hash.hex()}), 500
+    except Exception as e:
+        app.logger.error(f"User withdrawal failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/", methods=["GET"])

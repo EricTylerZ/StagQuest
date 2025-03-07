@@ -7,25 +7,12 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/mint",
-      "dest": "app.py"
-    },
-    {
-      "src": "/api/novena",
-      "dest": "app.py"
-    },
-    {
-      "src": "/api/checkin",
-      "dest": "app.py"
-    },
-    {
-      "src": "/api/status",
-      "dest": "app.py"
-    },
-    {
-      "src": "/",
-      "dest": "app.py"
-    }
+    {"src": "/api/mint", "dest": "app.py"},
+    {"src": "/api/novena", "dest": "app.py"},
+    {"src": "/api/checkin", "dest": "app.py"},
+    {"src": "/api/status", "dest": "app.py"},
+    {"src": "/api/owner-withdraw", "dest": "app.py"},
+    {"src": "/api/user-withdraw", "dest": "app.py"},
+    {"src": "/", "dest": "app.py"}
   ]
 }
