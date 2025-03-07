@@ -9,7 +9,7 @@ from src.config import w3, CONTRACT_ADDRESS_A, CONTRACT_ADDRESS_B, ORACLE_ADDRES
 
 app = Flask(__name__)
 
-# GitHub configuration
+# GitHub configuration (for periodic sync only)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
 
@@ -48,24 +48,16 @@ def update_github_file(content, version="a"):
     api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
-    # Check if file exists and get its SHA
     get_response = requests.get(api_url, headers=headers)
     sha = get_response.json().get("sha") if get_response.status_code == 200 else None
     
-    # Prepare payload
-    payload = {
-        "message": f"Update or create {file_path} from /api/status",
-        "content": "",
-        "branch": "main"
-    }
+    payload = {"message": f"Update or create {file_path} from /api/status", "content": "", "branch": "main"}
     if sha:
-        payload["sha"] = sha  # Update existing file
+        payload["sha"] = sha
     
-    # Encode content to base64
     import base64
     payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
     
-    # Create or update file
     response = requests.put(api_url, headers=headers, json=payload)
     if response.status_code in [200, 201]:
         app.logger.info(f"Successfully updated/created {file_path}: {response.status_code}")
@@ -110,6 +102,8 @@ def mint():
                     token_id = int(log["topics"][3].hex(), 16)
                     break
             if token_id:
+                # Sync status after minting
+                update_github_file(get_status_data(contract), version)
                 return jsonify({"message": "Stag minted", "tokenId": token_id, "txHash": tx_hash.hex()}), 200
             return jsonify({"error": "Mint succeeded but no tokenId found", "txHash": tx_hash.hex()}), 500
         return jsonify({"error": "Minting failed", "txHash": tx_hash.hex()}), 500
@@ -146,6 +140,7 @@ def start_novena():
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
+            update_github_file(get_status_data(contract), version)
             return jsonify({"message": f"Novena started for stagId {stag_id}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Novena start failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
@@ -180,18 +175,15 @@ def checkin():
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
+            update_github_file(get_status_data(contract), version)
             return jsonify({"stagId": stag_id, "success": success, "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Check-in failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Check-in failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/status", methods=["GET"])
-def status():
-    version = request.args.get("version", "a").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+def get_status_data(contract):
+    """Helper to fetch status data from contract."""
     try:
         total_supply = contract.functions.totalSupply().call()
         next_token_id = contract.functions.nextTokenId().call()
@@ -217,16 +209,32 @@ def status():
             except Exception as e:
                 app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
                 continue
-        sync_success = False
-        if stags or not stags:  # Always sync, even if empty, to create file
-            sync_success = update_github_file({"stags": stags}, version)
-        response = {"stags": stags}
-        if not sync_success:
-            response["warning"] = "GitHub sync failed - status data not updated in repo"
-        return jsonify(response), 200
+        return {"stags": stags}
     except Exception as e:
         app.logger.error(f"Status fetch failed: {e}")
-        return jsonify({"error": str(e)}), 500
+        return {"stags": []}
+
+@app.route("/api/status", methods=["GET"])
+def status():
+    version = request.args.get("version", "a").lower()
+    contract, error = get_contract(version)
+    if error:
+        return jsonify({"error": error}), 500
+    status_data = get_status_data(contract)
+    return jsonify(status_data), 200
+
+@app.route("/api/sync-status", methods=["POST"])
+def sync_status():
+    version = request.args.get("version", "a").lower()
+    contract, error = get_contract(version)
+    if error:
+        return jsonify({"error": error}), 500
+    status_data = get_status_data(contract)
+    sync_success = update_github_file(status_data, version)
+    response = status_data
+    if not sync_success:
+        response["warning"] = "GitHub sync failed - status data not updated in repo"
+    return jsonify(response), 200
 
 @app.route("/api/owner-withdraw", methods=["POST"])
 def owner_withdraw():
@@ -247,6 +255,7 @@ def owner_withdraw():
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
+            update_github_file(get_status_data(contract), version)
             return jsonify({"message": "Owner funds withdrawn", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Owner withdrawal failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
@@ -276,6 +285,7 @@ def user_withdraw():
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
+            update_github_file(get_status_data(contract), version)
             return jsonify({"message": f"Funds withdrawn for {OWNER_ADDRESS}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "User withdrawal failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
