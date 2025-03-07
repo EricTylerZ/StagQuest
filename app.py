@@ -6,6 +6,7 @@ import json
 from flask import Flask, request, jsonify
 from web3 import Web3
 from src.config import w3, CONTRACT_ADDRESS_C, OWNER_ADDRESS, OWNER_PRIVATE_KEY
+from time import time  # Added for cache-busting
 
 app = Flask(__name__)
 
@@ -16,7 +17,8 @@ CONTRACTS = {
     "c": {"address": CONTRACT_ADDRESS_C, "status_file": "data/stag_status_c.json"}
 }
 
-ABI_URL = "https://raw.githubusercontent.com/EricTylerZ/StagQuest/version-c/data/abi.json"
+# Updated ABI_URL with cache-busting timestamp
+ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/version-c/data/abi.json?t={int(time())}"
 
 def load_json_from_url(url):
     response = requests.get(url)
@@ -80,7 +82,7 @@ def mint():
             "from": OWNER_ADDRESS,
             "value": w3.to_wei(amount, "ether"),
             "nonce": nonce,
-            "gas": 300000,  # Updated to 300k
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -119,7 +121,7 @@ def start_novena():
             "from": OWNER_ADDRESS,
             "value": w3.to_wei(amount, "ether"),
             "nonce": nonce,
-            "gas": 300000,  # Updated to 300k
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -150,7 +152,7 @@ def complete_novena():
         txn = contract.functions.completeNovena(stag_id, successful_days).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 300000,  # Updated to 300k
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -181,7 +183,7 @@ def batch_complete_novena():
         txn = contract.functions.batchCompleteNovena(stag_ids, successes).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 5000000,  # Updated to 5M
+            "gas": 5000000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -212,7 +214,7 @@ def transfer():
         tx = contract.functions.transferFrom(OWNER_ADDRESS, to_address, stag_id).build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 300000,  # Updated to 300k
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
@@ -274,7 +276,7 @@ def owner_withdraw():
         tx = contract.functions.withdrawOwnerFunds().build_transaction({
             "from": OWNER_ADDRESS,
             "nonce": nonce,
-            "gas": 300000,  # Updated to 300k
+            "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
             "chainId": 84532
         })
