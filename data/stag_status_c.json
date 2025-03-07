@@ -3,6 +3,27 @@
     {
       "tokenId": 1,
       "owner": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813",
+      "familySize": 1,
+      "hasActiveNovena": false,
+      "successfulDays": 9
+    },
+    {
+      "tokenId": 2,
+      "owner": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813",
+      "familySize": 0,
+      "hasActiveNovena": true,
+      "successfulDays": 0
+    },
+    {
+      "tokenId": 3,
+      "owner": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813",
+      "familySize": 0,
+      "hasActiveNovena": false,
+      "successfulDays": 0
+    },
+    {
+      "tokenId": 4,
+      "owner": "0x2e0AA552E490Db6219C304a6b280e3DeA6962813",
       "familySize": 0,
       "hasActiveNovena": false,
       "successfulDays": 0
