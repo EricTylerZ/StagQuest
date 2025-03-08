@@ -4,7 +4,7 @@ import json
 
 BASE_URL = "https://stag-quest.vercel.app"
 
-def test_batch_complete(stag_ids=[1, 2], successful_days=[9, 7]):
+def test_batch_complete(stag_ids=[3, 4], successful_days=[9, 7]):  # Changed to 3, 4
     url = f"{BASE_URL}/api/batch-complete-novena?version=c"
     payload = {"stagIds": stag_ids, "successfulDays": successful_days}
     headers = {"Content-Type": "application/json"}
