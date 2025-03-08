@@ -1,4 +1,3 @@
-# app.py
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -10,7 +9,7 @@ import json
 import base64
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  # Allow localhost for dev
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://stag-quest.vercel.app"]}})
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
@@ -26,6 +25,7 @@ except Exception as e:
 
 def update_github_file(content, version="b"):
     if not GITHUB_TOKEN:
+        app.logger.error("GITHUB_TOKEN not set")
         return False
     file_path = CONTRACTS[version]["status_file"]
     api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
@@ -87,7 +87,7 @@ def start_novena():
     try:
         owner = contract.functions.ownerOf(stag_id).call()
         if owner.lower() != user_address.lower():
-            return jsonify({"error": "You don’t own this Stag Artistic"}), 403
+            return jsonify({"error": "You don’t own this Stag"}), 403
         nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
         tx = contract.functions.startNovena(stag_id).build_transaction({
             "from": OWNER_ADDRESS,

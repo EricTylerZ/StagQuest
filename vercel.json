@@ -3,17 +3,18 @@
   "builds": [
     {
       "src": "app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb" }
+    },
+    {
+      "src": "app/**",
+      "use": "@vercel/next"
     }
   ],
   "routes": [
-    {"src": "/api/mint", "dest": "app.py"},
-    {"src": "/api/novena", "dest": "app.py"},
-    {"src": "/api/complete-novena", "dest": "app.py"},
-    {"src": "/api/batch-complete-novena", "dest": "app.py"},
-    {"src": "/api/transfer", "dest": "app.py"},
-    {"src": "/api/status", "dest": "app.py"},
-    {"src": "/api/owner-withdraw", "dest": "app.py"},
-    {"src": "/", "dest": "app.py"}
+    { "src": "/api/mint", "dest": "/app.py" },
+    { "src": "/api/novena", "dest": "/app.py" },
+    { "src": "/api/status", "dest": "/app.py" },
+    { "src": "/(.*)", "dest": "/app/page.tsx" }
   ]
 }
