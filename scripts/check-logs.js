@@ -1,9 +1,8 @@
-// scripts/check-logs.js
 const { exec } = require('child_process');
 const fs = require('fs');
 
 function checkVercelLogs() {
-  exec('vercel logs stag-quest.vercel.app --json', (error, stdout, stderr) => {
+  exec('vercel inspect --logs stag-quest.vercel.app', (error, stdout, stderr) => {
     if (error) {
       console.error(`Error fetching logs: ${error.message}`);
       return;
@@ -12,12 +11,13 @@ function checkVercelLogs() {
       console.error(`Stderr: ${stderr}`);
       return;
     }
-    const logs = JSON.parse(stdout);
-    const errorLogs = logs.filter(log => log.type === 'error' && (log.message.includes('/api/mint') || log.message.includes('/api/status')));
+    // Parse logs (assuming logs are in stdout)
+    const logs = stdout.split('\n');
+    const errorLogs = logs.filter(log => log.includes('ERROR') && (log.includes('/api/mint') || log.includes('/api/status')));
     if (errorLogs.length > 0) {
       console.log('Found errors in Vercel logs:');
-      console.log(JSON.stringify(errorLogs, null, 2));
-      fs.writeFileSync('vercel-errors.json', JSON.stringify(errorLogs, null, 2));
+      console.log(errorLogs.join('\n'));
+      fs.writeFileSync('vercel-errors.txt', errorLogs.join('\n'));
     } else {
       console.log('No API errors found in Vercel logs.');
     }
