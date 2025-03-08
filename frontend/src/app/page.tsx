@@ -30,7 +30,6 @@ export default function Home() {
           alert("MetaMask not detected. Please ensure it’s installed and enabled.");
           return;
         }
-        // Use MetaMask provider explicitly if multiple are present
         provider = new ethers.BrowserProvider(
           ethereum.providers ? ethereum.providers.find((p: any) => p.isMetaMask) || ethereum : ethereum
         );
@@ -39,7 +38,6 @@ export default function Home() {
           alert("Coinbase Wallet not detected. Please ensure it’s installed and enabled.");
           return;
         }
-        // Use Coinbase Wallet provider explicitly
         provider = new ethers.BrowserProvider(
           ethereum.providers ? ethereum.providers.find((p: any) => p.isCoinbaseWallet) || ethereum : ethereum
         );
@@ -48,15 +46,19 @@ export default function Home() {
         return;
       }
 
-      // Request accounts
+      // Request accounts and get signer
       await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-      const address = await signer.getAddress();
+      const signer = await provider.getSigner(); // Await the signer
+      const address = await signer.getAddress(); // Should now work
       setWalletAddress(address);
       fetchStagStatus(address);
-    } catch (error) {
-      console.error(`Failed to connect ${walletType} wallet:`, error);
-      alert(`Failed to connect ${walletType} wallet: ${error.message || 'Unknown error'}`);
+    } catch (error: any) {
+      if (error.code === 4001) {
+        setMintResult(`Connection to ${walletType} wallet cancelled by user.`);
+      } else {
+        console.error(`Failed to connect ${walletType} wallet:`, error);
+        setMintResult(`Failed to connect ${walletType} wallet: ${error.message || 'Unknown error'}`);
+      }
     }
   }
 
@@ -164,6 +166,7 @@ export default function Home() {
           <button onClick={() => connectWallet(selectedWallet)}>
             Connect {selectedWallet === 'metamask' ? 'MetaMask' : 'Coinbase Wallet'}
           </button>
+          {mintResult && <p>{mintResult}</p>}
         </div>
       )}
     </div>
