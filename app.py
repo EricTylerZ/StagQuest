@@ -1,45 +1,39 @@
 # app.py
 import os
+import sys
 import requests
 import json
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 from web3 import Web3
-from src.config import w3, CONTRACT_ADDRESS_C, OWNER_ADDRESS, OWNER_PRIVATE_KEY
+from src.config import w3, CONTRACT_ADDRESS, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 from time import time
-import base64
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://stag-quest.vercel.app"]}})
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
-
-CONTRACTS = {
-    "b": {"address": CONTRACT_ADDRESS_C, "status_file": "data/stag_status_b.json"}
-}
+STATUS_FILE = "data/stag_status.json"  # For GitHub upload
 
 ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/version-b/data/abi.json?t={int(time())}"
 
 def load_json_from_url(url):
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()
-    raise Exception(f"Failed to load {url}: Status {response.status_code}")
+        return responseर्स
 
 try:
     abi = load_json_from_url(ABI_URL)
-    contracts = {"b": w3.eth.contract(address=CONTRACT_ADDRESS_C, abi=abi)}
+    contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)
 except Exception as e:
     app.logger.error(f"Failed to load ABI: {e}")
-    contracts = {"b": None}
+    contract = None
 
-def update_github_file(content, version="b"):
+def update_github_file(content):
     if not GITHUB_TOKEN:
         app.logger.error("GITHUB_TOKEN not set")
         return False
     
-    file_path = CONTRACTS[version]["status_file"]
+    file_path = STATUS_FILE
     api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     get_response = requests.get(api_url, headers=headers)
@@ -49,31 +43,21 @@ def update_github_file(content, version="b"):
     if sha:
         payload["sha"] = sha
     
+    import base64
     payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
     
     response = requests.put(api_url, headers=headers, json=payload)
     if response.status_code in [200, 201]:
-        app.logger.info(f"Successfully updated {file_path}: {response.status_code}")
+        app.logger.info(f"Successfully updated {file_path} on GitHub: {response.status_code}")
         return True
     else:
-        app.logger.error(f"Failed to update {file_path}: {response.status_code} - {response.text}")
+        app.logger.error(f"Failed to update {file_path} on GitHub: {response.status_code} - {response.text}")
         return False
-
-def get_contract(version="b"):
-    version = version.lower()
-    if version not in CONTRACTS:
-        return None, "Invalid version (use 'b')"
-    contract = contracts.get(version)
-    if not contract:
-        return None, "Contract not initialized"
-    return contract, None
 
 @app.route("/api/mint", methods=["POST"])
 def mint():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     try:
         data = request.get_json() or {}
         amount = data.get("amount", "0.0001")
@@ -96,7 +80,7 @@ def mint():
                     token_id = int(log["topics"][3].hex(), 16)
                     break
             if token_id:
-                update_github_file(get_status_data(contract), version)
+                update_github_file(get_status_data())
                 return jsonify({"message": "Stag minted", "tokenId": token_id, "txHash": tx_hash.hex()}), 200
             return jsonify({"error": "Mint succeeded but no tokenId found", "txHash": tx_hash.hex()}), 500
         return jsonify({"error": "Minting failed", "txHash": tx_hash.hex()}), 500
@@ -106,10 +90,8 @@ def mint():
 
 @app.route("/api/novena", methods=["POST"])
 def start_novena():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
     amount = data.get("amount", "0")
@@ -129,7 +111,7 @@ def start_novena():
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
-            update_github_file(get_status_data(contract), version)
+            update_github_file(get_status_data())
             return jsonify({"message": f"Novena started for stagId {stag_id}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Novena start failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
@@ -138,10 +120,8 @@ def start_novena():
 
 @app.route("/api/complete-novena", methods=["POST"])
 def complete_novena():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
     successful_days = data.get("successfulDays", 0)
@@ -160,7 +140,7 @@ def complete_novena():
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
-            update_github_file(get_status_data(contract), version)
+            update_github_file(get_status_data())
             return jsonify({"stagId": stag_id, "successfulDays": successful_days, "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Completion failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
@@ -169,10 +149,8 @@ def complete_novena():
 
 @app.route("/api/batch-complete-novena", methods=["POST"])
 def batch_complete_novena():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     data = request.get_json()
     stag_ids = data.get("stagIds", [])
     successes = data.get("successfulDays", [])
@@ -191,7 +169,7 @@ def batch_complete_novena():
         tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
-            update_github_file(get_status_data(contract), version)
+            update_github_file(get_status_data())
             return jsonify({"message": "Batch completion successful", "stagIds": stag_ids, "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Batch completion failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
@@ -200,10 +178,8 @@ def batch_complete_novena():
 
 @app.route("/api/transfer", methods=["POST"])
 def transfer():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
     to_address = data.get("toAddress")
@@ -222,14 +198,16 @@ def transfer():
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         if receipt.status == 1:
-            update_github_file(get_status_data(contract), version)
+            update_github_file(get_status_data())
             return jsonify({"message": f"Stag {stag_id} transferred to {to_address}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Transfer failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
         app.logger.error(f"Transfer failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
-def get_status_data(contract):
+def get_status_data():
+    if not contract:
+        return {"stags": [], "error": "Contract not initialized"}
     try:
         next_token_id = contract.functions.nextTokenId().call()
         stags = []
@@ -239,13 +217,14 @@ def get_status_data(contract):
                 family_size = contract.functions.familySize(token_id).call()
                 has_novena = contract.functions.hasActiveNovena(token_id).call()
                 successful_days = contract.functions.successfulDays(token_id).call()
-                stags.append({
+                stag_data = {
                     "tokenId": token_id,
                     "owner": owner,
                     "familySize": int(family_size),
                     "hasActiveNovena": has_novena,
                     "successfulDays": int(successful_days)
-                })
+                }
+                stags.append(stag_data)
             except Exception as e:
                 app.logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
                 continue
@@ -256,19 +235,13 @@ def get_status_data(contract):
 
 @app.route("/api/status", methods=["GET"])
 def status():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
-    status_data = get_status_data(contract)
+    status_data = get_status_data()
     return jsonify(status_data), 200
 
 @app.route("/api/owner-withdraw", methods=["POST"])
 def owner_withdraw():
-    version = request.args.get("version", "b").lower()
-    contract, error = get_contract(version)
-    if error:
-        return jsonify({"error": error}), 500
+    if not contract:
+        return jsonify({"error": "Contract not initialized"}), 500
     try:
         nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
         tx = contract.functions.withdrawOwnerFunds().build_transaction({
@@ -290,7 +263,7 @@ def owner_withdraw():
 
 @app.route("/", methods=["GET"])
 def home():
-    return "StagQuest API", 200
+    return "StagQuest Owner API", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
