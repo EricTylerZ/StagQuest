@@ -8,14 +8,9 @@ from web3 import Web3
 from src.config import w3, CONTRACT_ADDRESS_C, OWNER_ADDRESS, OWNER_PRIVATE_KEY
 from time import time
 import base64
-import logging
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://stag-quest.vercel.app"]}})
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
@@ -36,12 +31,10 @@ try:
     abi = load_json_from_url(ABI_URL)
     contracts = {"b": w3.eth.contract(address=CONTRACT_ADDRESS_C, abi=abi)}
 except Exception as e:
-    logger.error(f"Failed to load ABI: {e}")
     contracts = {"b": None}
 
 def update_github_file(content, version="b"):
     if not GITHUB_TOKEN:
-        logger.error("GITHUB_TOKEN not set")
         return False
     
     file_path = CONTRACTS[version]["status_file"]
@@ -57,12 +50,7 @@ def update_github_file(content, version="b"):
     payload["content"] = base64.b64encode(json.dumps(content, indent=2).encode()).decode()
     
     response = requests.put(api_url, headers=headers, json=payload)
-    if response.status_code in [200, 201]:
-        logger.info(f"Successfully updated {file_path}: {response.status_code}")
-        return True
-    else:
-        logger.error(f"Failed to update {file_path}: {response.status_code} - {response.text}")
-        return False
+    return response.status_code in [200, 201]
 
 def get_contract(version="b"):
     version = version.lower()
@@ -78,11 +66,10 @@ def mint():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     try:
         data = request.get_json() or {}
-        amount = data.get("amount", "0.0001")  # Default to min
+        amount = data.get("amount", "0.0001")
         nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
         tx = contract.functions.mintStag().build_transaction({
             "from": OWNER_ADDRESS,
@@ -107,7 +94,6 @@ def mint():
             return jsonify({"error": "Mint succeeded but no tokenId found", "txHash": tx_hash.hex()}), 500
         return jsonify({"error": "Minting failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Mint failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/novena", methods=["POST"])
@@ -115,11 +101,10 @@ def start_novena():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
-    amount = data.get("amount", "0")  # Optional ETH
+    amount = data.get("amount", "0")
     if not stag_id or not isinstance(stag_id, int):
         return jsonify({"error": "Invalid or missing stagId"}), 400
     try:
@@ -140,7 +125,6 @@ def start_novena():
             return jsonify({"message": f"Novena started for stagId {stag_id}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Novena start failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Novena start failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/complete-novena", methods=["POST"])
@@ -148,7 +132,6 @@ def complete_novena():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
@@ -172,7 +155,6 @@ def complete_novena():
             return jsonify({"stagId": stag_id, "successfulDays": successful_days, "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Completion failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Completion failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/batch-complete-novena", methods=["POST"])
@@ -180,7 +162,6 @@ def batch_complete_novena():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     data = request.get_json()
     stag_ids = data.get("stagIds", [])
@@ -204,7 +185,6 @@ def batch_complete_novena():
             return jsonify({"message": "Batch completion successful", "stagIds": stag_ids, "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Batch completion failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Batch completion failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/transfer", methods=["POST"])
@@ -212,7 +192,6 @@ def transfer():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     data = request.get_json()
     stag_id = data.get("stagId")
@@ -236,15 +215,12 @@ def transfer():
             return jsonify({"message": f"Stag {stag_id} transferred to {to_address}", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Transfer failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Transfer failed for stagId {stag_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 def get_status_data(contract):
     try:
         total_supply = contract.functions.totalSupply().call()
-        logger.info(f"Total supply: {total_supply}")
         next_token_id = contract.functions.nextTokenId().call()
-        logger.info(f"Next token ID: {next_token_id}")
         stags = []
         for token_id in range(1, next_token_id):
             try:
@@ -259,12 +235,10 @@ def get_status_data(contract):
                     "hasActiveNovena": has_novena,
                     "successfulDays": successful_days
                 })
-            except Exception as e:
-                logger.error(f"Failed to fetch status for tokenId {token_id}: {e}")
+            except:
                 continue
         return {"stags": stags}
     except Exception as e:
-        logger.error(f"Status fetch failed: {e}")
         return {"stags": [], "error": str(e)}
 
 @app.route("/api/status", methods=["GET"])
@@ -272,7 +246,6 @@ def status():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     status_data = get_status_data(contract)
     if "error" in status_data:
@@ -284,7 +257,6 @@ def owner_withdraw():
     version = request.args.get("version", "b").lower()
     contract, error = get_contract(version)
     if error:
-        logger.error(f"Contract error: {error}")
         return jsonify({"error": error}), 500
     try:
         nonce = w3.eth.get_transaction_count(OWNER_ADDRESS)
@@ -302,7 +274,6 @@ def owner_withdraw():
             return jsonify({"message": "Owner funds withdrawn", "txHash": tx_hash.hex()}), 200
         return jsonify({"error": "Owner withdrawal failed", "txHash": tx_hash.hex()}), 500
     except Exception as e:
-        logger.error(f"Owner withdrawal failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/", methods=["GET"])
