@@ -15,6 +15,7 @@ export default function Home() {
   const [stags, setStags] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
+  const [novenaAmount, setNovenaAmount] = useState<string>('0'); // New state for novena ETH
 
   const API_URL = 'https://stag-quest.vercel.app';
 
@@ -76,19 +77,28 @@ export default function Home() {
       setMintResult("Please connect your wallet first.");
       return;
     }
+    const amountInWei = BigInt(Math.floor(parseFloat(novenaAmount) * 10**18));
     startNovenaFn({
       address: CONTRACT_ADDRESS,
       abi: contractABI,
       functionName: 'startNovena',
       chainId: baseSepolia.id,
       args: [BigInt(tokenId)],
+      value: amountInWei, // Include optional ETH
     }, {
       onSuccess: () => {
         setMintResult(`Novena started for Stag ID: ${tokenId}`);
-        if (address) fetchStagStatus(address);
+        if (address) fetchStagStatus(address); // Refresh status
       },
       onError: (error) => setMintResult(`Failed to start novena: ${error.message}`),
     });
+  };
+
+  const handleRefresh = () => {
+    if (address) {
+      fetchStagStatus(address);
+      setMintResult("Status refreshed.");
+    }
   };
 
   if (!isMounted) {
@@ -131,9 +141,33 @@ export default function Home() {
               {mintPending ? 'Minting...' : 'Mint Stag'}
             </button>
           </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ marginRight: '10px' }}>Novena Amount (ETH, optional):</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={novenaAmount}
+              onChange={(e) => setNovenaAmount(e.target.value)}
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+          </div>
           {mintResult && <p style={{ color: mintResult.includes('failed') ? 'red' : 'green' }}>{mintResult}</p>}
           {mintError && <p style={{ color: 'red' }}>Mint Error: {mintError.message}</p>}
           <h2>Your Stags</h2>
+          <button
+            onClick={handleRefresh}
+            style={{
+              padding: '5px 10px',
+              backgroundColor: '#ff9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginBottom: '10px',
+            }}
+          >
+            Refresh Status
+          </button>
           {stags.length > 0 ? (
             stags.map((stag) => (
               <div key={stag.tokenId} style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px', borderRadius: '5px' }}>
