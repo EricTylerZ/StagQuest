@@ -1,17 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { useAccount } from 'wagmi';
+import { ConnectWallet } from '@coinbase/onchainkit/wallet';
+import { useAccount, useWriteContract } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
+import contractABI from '../data/abi.json'; // Correct path from app/ to data/
+
+const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5'; // From src/config.py
 
 export default function Home() {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const [mintResult, setMintResult] = useState<string | null>(null);
   const [stags, setStags] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   const API_URL = 'https://stag-quest.vercel.app';
+
+  // Mint Stag (client-side)
+  const { writeContract: mintStag, isPending: mintPending, error: mintError } = useWriteContract();
+
+  // Start Novena (client-side)
+  const [selectedStagId, setSelectedStagId] = useState<number | null>(null);
+  const { writeContract: startNovenaFn, isPending: novenaPending, error: novenaError } = useWriteContract();
 
   useEffect(() => {
     setIsMounted(true);
@@ -19,50 +29,6 @@ export default function Home() {
       fetchStagStatus(address);
     }
   }, [address]);
-
-  async function mintStag() {
-    if (!address) {
-      setMintResult("Please connect your wallet first.");
-      return;
-    }
-    try {
-      const response = await fetch(`${API_URL}/api/mint`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: '0.0001', address })
-      });
-      const text = await response.text();
-      if (!response.ok) throw new Error(`Server error: ${response.status} - ${text}`);
-      const data = JSON.parse(text);
-      setMintResult(data.tokenId ? `Stag minted! Token ID: ${data.tokenId}` : `Minting failed: ${data.error}`);
-      fetchStagStatus(address);
-    } catch (error: any) {
-      console.error('Mint error:', error);
-      setMintResult(`Minting failed: ${error.message}`);
-    }
-  }
-
-  async function startNovena(tokenId: number) {
-    if (!address) {
-      setMintResult("Please connect your wallet first.");
-      return;
-    }
-    try {
-      const response = await fetch(`${API_URL}/api/novena`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stagId: tokenId, amount: '0', address })
-      });
-      const text = await response.text();
-      if (!response.ok) throw new Error(`Server error: ${response.status} - ${text}`);
-      const data = JSON.parse(text);
-      setMintResult(data.message || `Failed to start novena: ${data.error}`);
-      fetchStagStatus(address);
-    } catch (error: any) {
-      console.error('Novena error:', error);
-      setMintResult(`Failed to start novena: ${error.message}`);
-    }
-  }
 
   async function fetchStagStatus(address: string) {
     try {
@@ -82,6 +48,47 @@ export default function Home() {
     }
   }
 
+  const handleMint = () => {
+    if (!isConnected) {
+      setMintResult("Please connect your wallet first.");
+      return;
+    }
+    mintStag({
+      address: CONTRACT_ADDRESS,
+      abi: contractABI,
+      functionName: 'mintStag',
+      chainId: baseSepolia.id,
+      value: BigInt('100000000000000'), // 0.0001 ETH
+    }, {
+      onSuccess: () => {
+        setMintResult("Stag minted successfully!");
+        if (address) fetchStagStatus(address);
+      },
+      onError: (error) => setMintResult(`Minting failed: ${error.message}`),
+    });
+  };
+
+  const handleStartNovena = (tokenId: number) => {
+    if (!isConnected) {
+      setMintResult("Please connect your wallet first.");
+      return;
+    }
+    setSelectedStagId(tokenId);
+    startNovenaFn({
+      address: CONTRACT_ADDRESS,
+      abi: contractABI,
+      functionName: 'startNovena',
+      chainId: baseSepolia.id,
+      args: [tokenId],
+    }, {
+      onSuccess: () => {
+        setMintResult(`Novena started for Stag ID: ${tokenId}`);
+        if (address) fetchStagStatus(address);
+      },
+      onError: (error) => setMintResult(`Failed to start novena: ${error.message}`),
+    });
+  };
+
   if (!isMounted) {
     return <div>Loading...</div>;
   }
@@ -90,60 +97,27 @@ export default function Home() {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>StagQuest</h1>
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setIsWalletOpen(!isWalletOpen)}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '9999px',
-              backgroundColor: address ? '#4CAF50' : '#0070f3',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '16px',
-            }}
-          >
-            {address ? `Connected: ${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet'}
-          </button>
-          {isWalletOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                padding: '10px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                zIndex: 10,
-              }}
-            >
-              <Wallet>
-                <ConnectWallet />
-                {address && <WalletDropdownDisconnect />}
-              </Wallet>
-            </div>
-          )}
-        </div>
+        <ConnectWallet />
       </header>
-      {address ? (
+      {isConnected ? (
         <main>
           <button
-            onClick={mintStag}
+            onClick={handleMint}
+            disabled={mintPending}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#0070f3',
+              backgroundColor: mintPending ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '5px',
-              cursor: 'pointer',
+              cursor: mintPending ? 'not-allowed' : 'pointer',
               marginBottom: '20px',
             }}
           >
-            Mint Stag
+            {mintPending ? 'Minting...' : 'Mint Stag'}
           </button>
           {mintResult && <p style={{ color: mintResult.includes('failed') ? 'red' : 'green' }}>{mintResult}</p>}
+          {mintError && <p style={{ color: 'red' }}>Mint Error: {mintError.message}</p>}
           <h2>Your Stags</h2>
           {stags.length > 0 ? (
             stags.map((stag) => (
@@ -154,19 +128,21 @@ export default function Home() {
                 <p>Successful Days: {stag.successfulDays}</p>
                 {!stag.hasActiveNovena && (
                   <button
-                    onClick={() => startNovena(stag.tokenId)}
+                    onClick={() => handleStartNovena(stag.tokenId)}
+                    disabled={novenaPending}
                     style={{
                       padding: '5px 10px',
-                      backgroundColor: '#4CAF50',
+                      backgroundColor: novenaPending ? '#ccc' : '#4CAF50',
                       color: 'white',
                       border: 'none',
                       borderRadius: '5px',
-                      cursor: 'pointer',
+                      cursor: novenaPending ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    Start Novena
+                    {novenaPending ? 'Starting...' : 'Start Novena'}
                   </button>
                 )}
+                {novenaError && <p style={{ color: 'red' }}>Novena Error: {novenaError.message}</p>}
               </div>
             ))
           ) : (
