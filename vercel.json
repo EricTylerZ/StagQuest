@@ -18,11 +18,5 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ],
-  "functions": {
-    "app.py": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  }
+  ]
 }
