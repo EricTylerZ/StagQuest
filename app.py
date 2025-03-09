@@ -14,12 +14,13 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
 STATUS_FILE = "data/stag_status.json"  # For GitHub upload
 
-ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/version-b/data/abi.json?t={int(time())}"
+ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/main/data/abi.json?t={int(time())}"  # Use main’s ABI
 
 def load_json_from_url(url):
     response = requests.get(url)
     if response.status_code == 200:
-        return responseर्स
+        return response.json()
+    raise Exception(f"Failed to load {url}: Status {response.status_code}")
 
 try:
     abi = load_json_from_url(ABI_URL)
