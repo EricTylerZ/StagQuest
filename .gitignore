@@ -5,9 +5,10 @@
 *.jpg
 *.png
 
-# Python cache
+# Python cache and virtual environment
 __pycache__/
 *.pyc
+venv/
 
 # Data files (generated or sensitive)
 data/users.json
@@ -22,9 +23,10 @@ docs/*.txt
 *.bak
 .vercel
 
-#node stuff
+#node depenencies etc
 node_modules/
 package-lock.json
 package.json
 
+# Next.js build output
 .next/

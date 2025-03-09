@@ -12,9 +12,9 @@ app = Flask(__name__)
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = "EricTylerZ/StagQuest"
-STATUS_FILE = "data/stag_status.json"  # For GitHub upload only
+STATUS_FILE = "data/stag_status.json"  # For GitHub upload
 
-ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/main/data/abi.json?t={int(time())}"
+ABI_URL = f"https://raw.githubusercontent.com/EricTylerZ/StagQuest/main/data/abi.json?t={int(time())}"  # Use main’s ABI
 
 def load_json_from_url(url):
     response = requests.get(url)
@@ -40,7 +40,7 @@ def update_github_file(content):
     get_response = requests.get(api_url, headers=headers)
     sha = get_response.json().get("sha") if get_response.status_code == 200 else None
     
-    payload = {"message": f"Update {file_path}", "content": "", "branch": "main"}
+    payload = {"message": f"Update {file_path}", "content": "", "branch": "version-b"}
     if sha:
         payload["sha"] = sha
     
