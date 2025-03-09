@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { useAccount, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
-import { Address } from 'viem'; // Import Address type from viem
+import { Address } from 'viem';
 import contractABI from '../data/abi.json';
 
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
@@ -18,7 +18,6 @@ export default function Home(): React.ReactNode {
   const [isMounted, setIsMounted] = useState(false);
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
   const [novenaAmount, setNovenaAmount] = useState<string>('0');
-  const [completeDays, setCompleteDays] = useState<string>('0');
   const [batchDays, setBatchDays] = useState<Record<number, string>>({});
 
   const API_URL = 'https://stag-quest.vercel.app';
@@ -28,7 +27,7 @@ export default function Home(): React.ReactNode {
     abi: contractABI,
     functionName: 'owner',
     chainId: baseSepolia.id,
-  }) as { data: Address | undefined }; // Type assertion for owner
+  }) as { data: Address | undefined };
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
@@ -41,7 +40,7 @@ export default function Home(): React.ReactNode {
     setIsMounted(true);
     if (address) {
       fetchStagStatus(address);
-      switchChain({ chainId: baseSepolia.id }); // Auto-switch to Base Sepolia
+      switchChain({ chainId: baseSepolia.id });
     }
   }, [address, switchChain]);
 
@@ -53,7 +52,7 @@ export default function Home(): React.ReactNode {
       const data = JSON.parse(text);
       if (data.stags) {
         const userStags = data.stags.filter((stag: any) => stag.owner.toLowerCase() === address.toLowerCase());
-        setStags(isOwner ? data.stags : userStags); // All Stags for owner, filtered for non-owner
+        setStags(isOwner ? data.stags : userStags);
         setMintResult(userStags.length > 0 ? null : "No stags found for this wallet.");
       } else {
         setMintResult("No stags found in response.");
@@ -113,7 +112,7 @@ export default function Home(): React.ReactNode {
 
   const handleCompleteNovena = (tokenId: number) => {
     if (!isConnected || !isOwner) return;
-    const days = parseInt(completeDays) || 0;
+    const days = parseInt(batchDays[tokenId] || '0') || 0;
     if (days > 9) {
       setMintResult("Successful days cannot exceed 9");
       return;
@@ -236,17 +235,6 @@ export default function Home(): React.ReactNode {
           </button>
           {isOwner && (
             <>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ marginRight: '10px' }}>Complete Novena Days (0-9):</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="9"
-                  value={completeDays}
-                  onChange={(e) => setCompleteDays(e.target.value)}
-                  style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-                />
-              </div>
               <h3>Batch Complete Novenas</h3>
               <button
                 onClick={handleBatchComplete}
