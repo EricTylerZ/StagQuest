@@ -17,6 +17,23 @@
     {
       "src": "package.json",
       "use": "@vercel/next"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "bot/discordBot.js",
+      "use": "@vercel/node"
     }
+  ],
+  "crons": [
+    {"path": "/api/cron", "schedule": "0 6 * * *"},  // 6 AM UTC
+    {"path": "/api/cron", "schedule": "0 8 * * *"},  // 8 AM
+    {"path": "/api/cron", "schedule": "0 10 * * *"}, // 10 AM
+    {"path": "/api/cron", "schedule": "0 12 * * *"}, // 12 PM
+    {"path": "/api/cron", "schedule": "0 15 * * *"}, // 3 PM
+    {"path": "/api/cron", "schedule": "0 18 * * *"}, // 6 PM
+    {"path": "/api/cron", "schedule": "0 21 * * *"}  // 9 PM
   ]
 }
