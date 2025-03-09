@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { useAccount, useWriteContract } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
-import contractABI from '../data/abi.json'; // Correct path from app/ to data/
+import contractABI from '../data/abi.json';
 
-const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5'; // From src/config.py
+const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
 const MINIMUM_MINT_AMOUNT = BigInt('100000000000000'); // 0.0001 ETH
 
 export default function Home() {
@@ -14,15 +14,11 @@ export default function Home() {
   const [mintResult, setMintResult] = useState<string | null>(null);
   const [stags, setStags] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [mintAmount, setMintAmount] = useState<string>('0.0001'); // Default value in ETH
+  const [mintAmount, setMintAmount] = useState<string>('0.0001');
 
   const API_URL = 'https://stag-quest.vercel.app';
 
-  // Mint Stag (client-side)
   const { writeContract: mintStag, isPending: mintPending, error: mintError } = useWriteContract();
-
-  // Start Novena (client-side)
-  const [selectedStagId, setSelectedStagId] = useState<number | null>(null);
   const { writeContract: startNovenaFn, isPending: novenaPending, error: novenaError } = useWriteContract();
 
   useEffect(() => {
@@ -80,13 +76,12 @@ export default function Home() {
       setMintResult("Please connect your wallet first.");
       return;
     }
-    setSelectedStagId(tokenId);
     startNovenaFn({
       address: CONTRACT_ADDRESS,
       abi: contractABI,
       functionName: 'startNovena',
       chainId: baseSepolia.id,
-      args: [tokenId],
+      args: [BigInt(tokenId)], // Ensure tokenId is BigInt
     }, {
       onSuccess: () => {
         setMintResult(`Novena started for Stag ID: ${tokenId}`);
@@ -105,7 +100,7 @@ export default function Home() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>StagQuest</h1>
         <ConnectWallet 
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 min-w-[150px] text-center"
           text={isConnected ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}` : 'Connect Wallet'}
         />
       </header>
