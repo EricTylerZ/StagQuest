@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { ConnectWallet } from '@coinbase/onchainkit/wallet';
 import { useAccount, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
+import { Address } from 'viem'; // Import Address type from viem
 import contractABI from '../data/abi.json';
 
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
 const MINIMUM_MINT_AMOUNT = BigInt('100000000000000'); // 0.0001 ETH
 
-export default function Home() {
+export default function Home(): React.ReactNode {
   const { address, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
   const [mintResult, setMintResult] = useState<string | null>(null);
@@ -17,8 +18,8 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
   const [novenaAmount, setNovenaAmount] = useState<string>('0');
-  const [completeDays, setCompleteDays] = useState<string>('0'); // For completeNovena
-  const [batchDays, setBatchDays] = useState<Record<number, string>>({}); // For batchCompleteNovena
+  const [completeDays, setCompleteDays] = useState<string>('0');
+  const [batchDays, setBatchDays] = useState<Record<number, string>>({});
 
   const API_URL = 'https://stag-quest.vercel.app';
 
@@ -27,7 +28,7 @@ export default function Home() {
     abi: contractABI,
     functionName: 'owner',
     chainId: baseSepolia.id,
-  });
+  }) as { data: Address | undefined }; // Type assertion for owner
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
@@ -40,7 +41,7 @@ export default function Home() {
     setIsMounted(true);
     if (address) {
       fetchStagStatus(address);
-      switchChain({ chainId: baseSepolia.id }); // Ensure Base Sepolia
+      switchChain({ chainId: baseSepolia.id }); // Auto-switch to Base Sepolia
     }
   }, [address, switchChain]);
 
@@ -52,7 +53,7 @@ export default function Home() {
       const data = JSON.parse(text);
       if (data.stags) {
         const userStags = data.stags.filter((stag: any) => stag.owner.toLowerCase() === address.toLowerCase());
-        setStags(data.stags); // Show all Stags for owner, filter for non-owner
+        setStags(isOwner ? data.stags : userStags); // All Stags for owner, filtered for non-owner
         setMintResult(userStags.length > 0 ? null : "No stags found for this wallet.");
       } else {
         setMintResult("No stags found in response.");
@@ -178,45 +179,41 @@ export default function Home() {
       </header>
       {isConnected ? (
         <main>
-          {!isOwner && (
-            <>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ marginRight: '10px' }}>Mint Amount (ETH, min 0.0001):</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={mintAmount}
-                  onChange={(e) => setMintAmount(e.target.value)}
-                  style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-                />
-                <button
-                  onClick={handleMint}
-                  disabled={mintPending}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: mintPending ? '#ccc' : '#0070f3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: mintPending ? 'not-allowed' : 'pointer',
-                    marginLeft: '10px',
-                  }}
-                >
-                  {mintPending ? 'Minting...' : 'Mint Stag'}
-                </button>
-              </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ marginRight: '10px' }}>Novena Amount (ETH, optional):</label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={novenaAmount}
-                  onChange={(e) => setNovenaAmount(e.target.value)}
-                  style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-                />
-              </div>
-            </>
-          )}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ marginRight: '10px' }}>Mint Amount (ETH, min 0.0001):</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={mintAmount}
+              onChange={(e) => setMintAmount(e.target.value)}
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+            <button
+              onClick={handleMint}
+              disabled={mintPending}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: mintPending ? '#ccc' : '#0070f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: mintPending ? 'not-allowed' : 'pointer',
+                marginLeft: '10px',
+              }}
+            >
+              {mintPending ? 'Minting...' : 'Mint Stag'}
+            </button>
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ marginRight: '10px' }}>Novena Amount (ETH, optional):</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={novenaAmount}
+              onChange={(e) => setNovenaAmount(e.target.value)}
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+          </div>
           {mintResult && <p style={{ color: mintResult.includes('failed') ? 'red' : 'green' }}>{mintResult}</p>}
           {mintError && <p style={{ color: 'red' }}>Mint Error: {mintError.message}</p>}
           {novenaError && <p style={{ color: 'red' }}>Novena Error: {novenaError.message}</p>}
@@ -276,7 +273,7 @@ export default function Home() {
                 <p>Family Size: {stag.familySize}</p>
                 <p>Active Novena: {stag.hasActiveNovena ? 'Yes' : 'No'}</p>
                 <p>Successful Days: {stag.successfulDays}</p>
-                {!isOwner && !stag.hasActiveNovena && (
+                {!stag.hasActiveNovena && (
                   <button
                     onClick={() => handleStartNovena(stag.tokenId)}
                     disabled={novenaPending}
@@ -287,6 +284,7 @@ export default function Home() {
                       border: 'none',
                       borderRadius: '5px',
                       cursor: novenaPending ? 'not-allowed' : 'pointer',
+                      marginRight: '10px',
                     }}
                   >
                     {novenaPending ? 'Starting...' : 'Start Novena'}
@@ -322,7 +320,7 @@ export default function Home() {
               </div>
             ))
           ) : (
-            <p>No Stags found. {isOwner ? '' : 'Mint one to get started!'}</p>
+            <p>No Stags found. Mint one to get started!</p>
           )}
         </main>
       ) : (
