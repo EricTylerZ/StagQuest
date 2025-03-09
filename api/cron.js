@@ -2,13 +2,20 @@ const { get, put } = require('@vercel/blob');
 const { sendPrompt } = require('../bot/discordBot');
 
 module.exports = async (req, res) => {
-  const times = ['Lauds', 'Prime', 'Terce', 'Sext', 'None', 'Vespers', 'Compline'];
+  const times = {
+    6: 'Lauds',   // 6 AM UTC
+    8: 'Prime',   // 8 AM
+    10: 'Terce',  // 10 AM
+    12: 'Sext',   // 12 PM
+    15: 'None',   // 3 PM
+    18: 'Vespers', // 6 PM
+    21: 'Compline' // 9 PM
+  };
   const now = new Date();
   const hour = now.getUTCHours();
-  const timeIndex = Math.floor(hour / 3);
-  const currentTime = times[timeIndex] || 'Compline';
+  const currentTime = times[hour] || null;
+  if (!currentTime) return res.status(200).send('No prompt for this hour');
 
-  // Fetch all active novenas (simulate DB query with blob list)
   const { blobs } = await get({ prefix: 'novenas/' });
   const activeNovenas = blobs.filter(b => {
     const novena = JSON.parse(b.data);
