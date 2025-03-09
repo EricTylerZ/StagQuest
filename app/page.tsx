@@ -81,7 +81,7 @@ export default function Home() {
       abi: contractABI,
       functionName: 'startNovena',
       chainId: baseSepolia.id,
-      args: [BigInt(tokenId)], // Ensure tokenId is BigInt
+      args: [BigInt(tokenId)],
     }, {
       onSuccess: () => {
         setMintResult(`Novena started for Stag ID: ${tokenId}`);
