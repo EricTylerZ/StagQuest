@@ -4,10 +4,12 @@ import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { baseSepolia } from 'wagmi/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { injected } from 'wagmi/connectors';
 
 const config = createConfig({
   chains: [baseSepolia],
-  transports: { [baseSepolia.id]: http('https://sepolia.base.org') }
+  connectors: [injected()], // Supports MetaMask and other injected wallets
+  transports: { [baseSepolia.id]: http('https://sepolia.base.org') },
 });
 
 const queryClient = new QueryClient();
