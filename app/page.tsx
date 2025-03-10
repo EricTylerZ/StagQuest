@@ -8,7 +8,7 @@ import { Address } from 'viem';
 import contractABI from '../data/abi.json';
 
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
-const MINIMUM_MINT_AMOUNT = BigInt('100000000000000'); // 0.0001 ETH
+const MINIMUM_MINT_AMOUNT = BigInt('100000000000000');
 
 export default function Home(): React.ReactNode {
   const { address, isConnected } = useAccount();
@@ -19,6 +19,8 @@ export default function Home(): React.ReactNode {
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
   const [novenaAmount, setNovenaAmount] = useState<string>('0');
   const [batchDays, setBatchDays] = useState<Record<number, string>>({});
+  const [timezone, setTimezone] = useState<string>('');
+  const [discordId, setDiscordId] = useState<string>('');
 
   const API_URL = 'https://stag-quest.vercel.app';
 
@@ -41,6 +43,7 @@ export default function Home(): React.ReactNode {
     if (address) {
       fetchStagStatus(address);
       switchChain({ chainId: baseSepolia.id });
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     }
   }, [address, switchChain]);
 
@@ -64,7 +67,7 @@ export default function Home(): React.ReactNode {
   }
 
   const handleMint = () => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
       setMintResult("Please connect your wallet first.");
       return;
     }
@@ -88,9 +91,24 @@ export default function Home(): React.ReactNode {
     });
   };
 
-  const handleStartNovena = (tokenId: number) => {
-    if (!isConnected) {
+  const handleStartNovena = async (tokenId: number) => {
+    if (!isConnected || !address) {
       setMintResult("Please connect your wallet first.");
+      return;
+    }
+    if (!discordId) {
+      setMintResult("Please enter your Discord ID first.");
+      return;
+    }
+    const { data: stagOwner } = useReadContract({
+      address: CONTRACT_ADDRESS,
+      abi: contractABI,
+      functionName: 'ownerOf',
+      args: [BigInt(tokenId)],
+      chainId: baseSepolia.id,
+    }) as { data: Address | undefined };
+    if (!stagOwner || stagOwner.toLowerCase() !== address.toLowerCase()) {
+      setMintResult("You don’t own this Stag!");
       return;
     }
     const amountInWei = BigInt(Math.floor(parseFloat(novenaAmount) * 10**18));
@@ -102,9 +120,16 @@ export default function Home(): React.ReactNode {
       args: [BigInt(tokenId)],
       value: amountInWei,
     }, {
-      onSuccess: () => {
+      onSuccess: async () => {
         setMintResult(`Novena started for Stag ID: ${tokenId}`);
-        if (address) fetchStagStatus(address);
+        if (address) {
+          fetchStagStatus(address);
+          await fetch(`${API_URL}/api/start-novena`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stagId: tokenId, ownerAddress: address, timezone, discordId }),
+          });
+        }
       },
       onError: (error) => setMintResult(`Failed to start novena: ${error.message}`),
     });
@@ -210,6 +235,25 @@ export default function Home(): React.ReactNode {
               step="0.0001"
               value={novenaAmount}
               onChange={(e) => setNovenaAmount(e.target.value)}
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ marginRight: '10px' }}>Timezone (Detected: {timezone}):</label>
+            <input
+              type="text"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
+            />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ marginRight: '10px' }}>Discord ID:</label>
+            <input
+              type="text"
+              value={discordId}
+              onChange={(e) => setDiscordId(e.target.value)}
+              placeholder="e.g., 123456789012345678"
               style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
             />
           </div>

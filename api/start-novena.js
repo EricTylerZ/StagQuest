@@ -1,0 +1,26 @@
+const { put } = require('@vercel/blob');
+
+module.exports = async (req, res) => {
+  const { stagId, ownerAddress, timezone, discordId } = req.body;
+
+  if (!stagId || !ownerAddress || !timezone || !discordId) {
+    return res.status(400).json({ error: 'Missing stagId, ownerAddress, timezone, or discordId' });
+  }
+
+  const novena = {
+    stag_id: Number(stagId),
+    owner_address: ownerAddress,
+    discord_id: discordId,
+    start_time: new Date().toISOString(),
+    current_day: 1,
+    responses: {},
+    timezone
+  };
+
+  await put(`novenas/${stagId}.json`, JSON.stringify(novena), { access: 'public' });
+
+  const mapping = { stagIds: [Number(stagId)], timezone };
+  await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { access: 'public' });
+
+  res.status(200).json({ message: 'Novena started' });
+};
