@@ -44,19 +44,23 @@ export default function Home(): React.ReactNode {
       switchChain({ chainId: baseSepolia.id });
       const urlParams = new URLSearchParams(window.location.search);
       const discordId = urlParams.get('discordId');
-      if (discordId) {
-        setStagData(prev => ({ ...prev, [stags[0]?.tokenId || 0]: { ...prev[stags[0]?.tokenId || 0], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
+      if (discordId && stags.length > 0) {
+        setStagData(prev => ({ ...prev, [stags[0].tokenId]: { ...prev[stags[0].tokenId], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
       }
     }
-  }, [address, switchChain]);
+  }, [address, switchChain, stags]);
 
   async function fetchStagStatus(address: string) {
     try {
-      const response = await fetch(`${API_URL}/api/status`, { mode: 'cors' });
+      console.log('Fetching status for address:', address); // Debug
+      const response = await fetch(`${API_URL}/api/status`, { mode: 'cors', cache: 'no-cache' });
+      console.log('Response status:', response.status); // Debug
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status} - ${await response.text()}`);
+        const text = await response.text();
+        throw new Error(`Server error: ${response.status} - ${text}`);
       }
       const data = await response.json();
+      console.log('Status data:', data); // Debug
       if (data.stags) {
         const userStags = data.stags.filter((stag: any) => stag.owner.toLowerCase() === address.toLowerCase());
         setStags(isOwner ? data.stags : userStags);
