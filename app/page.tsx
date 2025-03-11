@@ -12,7 +12,7 @@ const MINIMUM_MINT_AMOUNT = BigInt('100000000000000');
 const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
 export default function Home(): React.ReactNode {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const [mintResult, setMintResult] = useState<string | null>(null);
   const [stags, setStags] = useState<any[]>([]);
@@ -33,7 +33,7 @@ export default function Home(): React.ReactNode {
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
   const { writeContract: mintStag, isPending: mintPending, error: mintError } = useWriteContract();
-  const { writeContract: startNovenaFn, isPending: novenaPending, error: novenaError } = useWriteContract();
+  const { writeContractAsync: startNovenaFn, isPending: novenaPending, error: novenaError } = useWriteContract();
   const { writeContract: completeNovenaFn, isPending: completePending, error: completeError } = useWriteContract();
   const { writeContract: batchCompleteNovenaFn, isPending: batchPending, error: batchError } = useWriteContract();
 
@@ -43,15 +43,29 @@ export default function Home(): React.ReactNode {
       fetchStagStatus(address); // Initial fetch only on address change
       switchChain({ chainId: baseSepolia.id });
     }
-  }, [address, switchChain]); // Removed stags from deps
+  }, [address, switchChain]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const discordId = urlParams.get('discordId');
-    if (discordId && stags.length > 0) {
-      setStagData(prev => ({ ...prev, [stags[0].tokenId]: { ...prev[stags[0].tokenId], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
+    if (discordId && address) {
+      setStagData(prev => {
+        const newData = { ...prev };
+        stags.forEach(stag => {
+          if (stag.owner.toLowerCase() === address.toLowerCase()) {
+            newData[stag.tokenId] = {
+              ...newData[stag.tokenId],
+              discordId,
+              timezone: newData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+              email: newData[stag.tokenId]?.email || '',
+              novenaAmount: newData[stag.tokenId]?.novenaAmount || '0'
+            };
+          }
+        });
+        return newData;
+      });
     }
-  }, [stags]); // Separate effect for OAuth redirect
+  }, [stags, address]);
 
   async function fetchStagStatus(address: string) {
     try {
@@ -107,6 +121,10 @@ export default function Home(): React.ReactNode {
       setMintResult("Please connect your wallet first.");
       return;
     }
+    if (chainId !== baseSepolia.id) {
+      setMintResult("Please switch to Base Sepolia network.");
+      return;
+    }
     const { timezone, discordId, novenaAmount } = stagData[tokenId] || {};
     if (!timezone || !discordId) {
       setMintResult("Please set timezone and Discord ID for this Stag.");
@@ -124,15 +142,16 @@ export default function Home(): React.ReactNode {
       return;
     }
     const amountInWei = BigInt(Math.floor(parseFloat(novenaAmount || '0') * 10**18));
-    startNovenaFn({
-      address: CONTRACT_ADDRESS,
-      abi: contractABI,
-      functionName: 'startNovena',
-      chainId: baseSepolia.id,
-      args: [BigInt(tokenId)],
-      value: amountInWei,
-    }, {
-      onSuccess: async () => {
+    console.log('Attempting to start novena for tokenId:', tokenId, 'with amount:', amountInWei);
+    try {
+      await startNovenaFn({
+        address: CONTRACT_ADDRESS,
+        abi: contractABI,
+        functionName: 'startNovena',
+        chainId: baseSepolia.id,
+        args: [BigInt(tokenId)],
+        value: amountInWei,
+      }).then(async () => {
         setMintResult(`Novena started for Stag ID: ${tokenId}`);
         if (address) {
           fetchStagStatus(address);
@@ -142,9 +161,11 @@ export default function Home(): React.ReactNode {
             body: JSON.stringify({ stagId: tokenId, ownerAddress: address, timezone, discordId, email: stagData[tokenId]?.email || '' }),
           });
         }
-      },
-      onError: (error) => setMintResult(`Failed to start novena: ${error.message}`),
-    });
+      });
+    } catch (error: unknown) {
+      console.error('Error starting novena:', error);
+      setMintResult(`Failed to start novena: ${(error as Error).message}`);
+    }
   };
 
   const handleCompleteNovena = (tokenId: number) => {
