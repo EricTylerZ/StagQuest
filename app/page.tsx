@@ -9,6 +9,7 @@ import contractABI from '../data/abi.json';
 
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
 const MINIMUM_MINT_AMOUNT = BigInt('100000000000000');
+const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
 export default function Home(): React.ReactNode {
   const { address, isConnected } = useAccount();
@@ -19,8 +20,7 @@ export default function Home(): React.ReactNode {
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
   const [novenaAmount, setNovenaAmount] = useState<string>('0');
   const [batchDays, setBatchDays] = useState<Record<number, string>>({});
-  const [timezone, setTimezone] = useState<string>('');
-  const [discordId, setDiscordId] = useState<string>('');
+  const [stagData, setStagData] = useState<Record<number, { timezone: string, discordId: string, email: string }>>({});
 
   const API_URL = 'https://stag-quest.vercel.app';
 
@@ -43,16 +43,16 @@ export default function Home(): React.ReactNode {
     if (address) {
       fetchStagStatus(address);
       switchChain({ chainId: baseSepolia.id });
-      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     }
   }, [address, switchChain]);
 
   async function fetchStagStatus(address: string) {
     try {
-      const response = await fetch(`${API_URL}/api/status`);
-      const text = await response.text();
-      if (!response.ok) throw new Error(`Server error: ${response.status} - ${text}`);
-      const data = JSON.parse(text);
+      const response = await fetch(`${API_URL}/api/status`, { mode: 'cors' });
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} - ${await response.text()}`);
+      }
+      const data = await response.json();
       if (data.stags) {
         const userStags = data.stags.filter((stag: any) => stag.owner.toLowerCase() === address.toLowerCase());
         setStags(isOwner ? data.stags : userStags);
@@ -61,7 +61,7 @@ export default function Home(): React.ReactNode {
         setMintResult("No stags found in response.");
       }
     } catch (error: any) {
-      console.error('Status error:', error);
+      console.error('Fetch error:', error);
       setMintResult(`Failed to fetch status: ${error.message}`);
     }
   }
@@ -96,8 +96,9 @@ export default function Home(): React.ReactNode {
       setMintResult("Please connect your wallet first.");
       return;
     }
-    if (!discordId) {
-      setMintResult("Please enter your Discord ID first.");
+    const { timezone, discordId } = stagData[tokenId] || {};
+    if (!timezone || !discordId) {
+      setMintResult("Please set timezone and Discord ID for this Stag.");
       return;
     }
     const { data: stagOwner } = useReadContract({
@@ -107,7 +108,7 @@ export default function Home(): React.ReactNode {
       args: [BigInt(tokenId)],
       chainId: baseSepolia.id,
     }) as { data: Address | undefined };
-    if (!stagOwner || stagOwner.toLowerCase() !== address.toLowerCase()) {
+    if (!isOwner && (!stagOwner || stagOwner.toLowerCase() !== address.toLowerCase())) {
       setMintResult("You don’t own this Stag!");
       return;
     }
@@ -188,6 +189,10 @@ export default function Home(): React.ReactNode {
     }
   };
 
+  const handleDiscordLogin = () => {
+    window.location.href = DISCORD_OAUTH_URL;
+  };
+
   if (!isMounted) {
     return <div>Loading...</div>;
   }
@@ -196,10 +201,26 @@ export default function Home(): React.ReactNode {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ margin: 0 }}>StagQuest {isOwner ? '(Admin)' : ''}</h1>
-        <ConnectWallet 
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 min-w-[150px] text-center"
-          text={isConnected ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}` : 'Connect Wallet'}
-        />
+        <div>
+          <ConnectWallet 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 min-w-[150px] text-center"
+            text={isConnected ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}` : 'Connect Wallet'}
+          />
+          <button
+            onClick={handleDiscordLogin}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#7289da',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginLeft: '10px',
+            }}
+          >
+            Login with Discord
+          </button>
+        </div>
       </header>
       {isConnected ? (
         <main>
@@ -235,25 +256,6 @@ export default function Home(): React.ReactNode {
               step="0.0001"
               value={novenaAmount}
               onChange={(e) => setNovenaAmount(e.target.value)}
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-            />
-          </div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ marginRight: '10px' }}>Timezone (Detected: {timezone}):</label>
-            <input
-              type="text"
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-            />
-          </div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ marginRight: '10px' }}>Discord ID:</label>
-            <input
-              type="text"
-              value={discordId}
-              onChange={(e) => setDiscordId(e.target.value)}
-              placeholder="e.g., 123456789012345678"
               style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
             />
           </div>
@@ -306,21 +308,52 @@ export default function Home(): React.ReactNode {
                 <p>Active Novena: {stag.hasActiveNovena ? 'Yes' : 'No'}</p>
                 <p>Successful Days: {stag.successfulDays}</p>
                 {!stag.hasActiveNovena && (
-                  <button
-                    onClick={() => handleStartNovena(stag.tokenId)}
-                    disabled={novenaPending}
-                    style={{
-                      padding: '5px 10px',
-                      backgroundColor: novenaPending ? '#ccc' : '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: novenaPending ? 'not-allowed' : 'pointer',
-                      marginRight: '10px',
-                    }}
-                  >
-                    {novenaPending ? 'Starting...' : 'Start Novena'}
-                  </button>
+                  <>
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ marginRight: '10px' }}>Timezone:</label>
+                      <input
+                        type="text"
+                        value={stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], timezone: e.target.value, discordId: stagData[stag.tokenId]?.discordId || '', email: stagData[stag.tokenId]?.email || '' } })}
+                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
+                      />
+                    </div>
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ marginRight: '10px' }}>Discord ID:</label>
+                      <input
+                        type="text"
+                        value={stagData[stag.tokenId]?.discordId || ''}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], discordId: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: stagData[stag.tokenId]?.email || '' } })}
+                        placeholder="e.g., 123456789012345678"
+                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
+                      />
+                    </div>
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ marginRight: '10px' }}>Email:</label>
+                      <input
+                        type="email"
+                        value={stagData[stag.tokenId]?.email || ''}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], email: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', discordId: stagData[stag.tokenId]?.discordId || '' } })}
+                        placeholder="e.g., user@example.com"
+                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleStartNovena(stag.tokenId)}
+                      disabled={novenaPending}
+                      style={{
+                        padding: '5px 10px',
+                        backgroundColor: novenaPending ? '#ccc' : '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: novenaPending ? 'not-allowed' : 'pointer',
+                        marginTop: '10px',
+                      }}
+                    >
+                      {novenaPending ? 'Starting...' : 'Start Novena'}
+                    </button>
+                  </>
                 )}
                 {isOwner && stag.hasActiveNovena && (
                   <>
