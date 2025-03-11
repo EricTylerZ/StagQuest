@@ -1,33 +1,12 @@
 {
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/app.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/app"
-    }
+    {"source": "/api/:path*", "destination": "/api/:path*"},
+    {"source": "/(.*)", "destination": "/app"}
   ],
   "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "bot/discordBot.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "crons": [
-    {"path": "/api/cron", "schedule": "0 * * * *"}
+    {"src": "app.py", "use": "@vercel/python"},
+    {"src": "package.json", "use": "@vercel/next"},
+    {"src": "api/**/*.js", "use": "@vercel/node"},
+    {"src": "bot/discordBot.js", "use": "@vercel/node"}
   ]
 }

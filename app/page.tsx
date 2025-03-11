@@ -18,9 +18,8 @@ export default function Home(): React.ReactNode {
   const [stags, setStags] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
-  const [novenaAmount, setNovenaAmount] = useState<string>('0');
   const [batchDays, setBatchDays] = useState<Record<number, string>>({});
-  const [stagData, setStagData] = useState<Record<number, { timezone: string, discordId: string, email: string }>>({});
+  const [stagData, setStagData] = useState<Record<number, { timezone: string, discordId: string, email: string, novenaAmount: string }>>({});
 
   const API_URL = 'https://stag-quest.vercel.app';
 
@@ -43,6 +42,11 @@ export default function Home(): React.ReactNode {
     if (address) {
       fetchStagStatus(address);
       switchChain({ chainId: baseSepolia.id });
+      const urlParams = new URLSearchParams(window.location.search);
+      const discordId = urlParams.get('discordId');
+      if (discordId) {
+        setStagData(prev => ({ ...prev, [stags[0]?.tokenId || 0]: { ...prev[stags[0]?.tokenId || 0], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
+      }
     }
   }, [address, switchChain]);
 
@@ -96,7 +100,7 @@ export default function Home(): React.ReactNode {
       setMintResult("Please connect your wallet first.");
       return;
     }
-    const { timezone, discordId } = stagData[tokenId] || {};
+    const { timezone, discordId, novenaAmount } = stagData[tokenId] || {};
     if (!timezone || !discordId) {
       setMintResult("Please set timezone and Discord ID for this Stag.");
       return;
@@ -112,7 +116,7 @@ export default function Home(): React.ReactNode {
       setMintResult("You don’t own this Stag!");
       return;
     }
-    const amountInWei = BigInt(Math.floor(parseFloat(novenaAmount) * 10**18));
+    const amountInWei = BigInt(Math.floor(parseFloat(novenaAmount || '0') * 10**18));
     startNovenaFn({
       address: CONTRACT_ADDRESS,
       abi: contractABI,
@@ -128,7 +132,7 @@ export default function Home(): React.ReactNode {
           await fetch(`${API_URL}/api/start-novena`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ stagId: tokenId, ownerAddress: address, timezone, discordId }),
+            body: JSON.stringify({ stagId: tokenId, ownerAddress: address, timezone, discordId, email: stagData[tokenId]?.email || '' }),
           });
         }
       },
@@ -193,6 +197,11 @@ export default function Home(): React.ReactNode {
     window.location.href = DISCORD_OAUTH_URL;
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setMintResult("Address copied to clipboard!");
+  };
+
   if (!isMounted) {
     return <div>Loading...</div>;
   }
@@ -249,16 +258,6 @@ export default function Home(): React.ReactNode {
               {mintPending ? 'Minting...' : 'Mint Stag'}
             </button>
           </div>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ marginRight: '10px' }}>Novena Amount (ETH, optional):</label>
-            <input
-              type="number"
-              step="0.0001"
-              value={novenaAmount}
-              onChange={(e) => setNovenaAmount(e.target.value)}
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd' }}
-            />
-          </div>
           {mintResult && <p style={{ color: mintResult.includes('failed') ? 'red' : 'green' }}>{mintResult}</p>}
           {mintError && <p style={{ color: 'red' }}>Mint Error: {mintError.message}</p>}
           {novenaError && <p style={{ color: 'red' }}>Novena Error: {novenaError.message}</p>}
@@ -303,7 +302,15 @@ export default function Home(): React.ReactNode {
             stags.map((stag) => (
               <div key={stag.tokenId} style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px', borderRadius: '5px' }}>
                 <p>Stag ID: {stag.tokenId}</p>
-                <p>Owner: {stag.owner.slice(0, 6)}...{stag.owner.slice(-4)}</p>
+                <p>
+                  Owner: {stag.owner.slice(0, 6)}...{stag.owner.slice(-4)}
+                  <button
+                    onClick={() => copyToClipboard(stag.owner)}
+                    style={{ marginLeft: '10px', padding: '2px 5px', backgroundColor: '#ddd', border: 'none', cursor: 'pointer' }}
+                  >
+                    📋
+                  </button>
+                </p>
                 <p>Family Size: {stag.familySize}</p>
                 <p>Active Novena: {stag.hasActiveNovena ? 'Yes' : 'No'}</p>
                 <p>Successful Days: {stag.successfulDays}</p>
@@ -314,7 +321,7 @@ export default function Home(): React.ReactNode {
                       <input
                         type="text"
                         value={stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
-                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], timezone: e.target.value, discordId: stagData[stag.tokenId]?.discordId || '', email: stagData[stag.tokenId]?.email || '' } })}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], timezone: e.target.value, discordId: stagData[stag.tokenId]?.discordId || '', email: stagData[stag.tokenId]?.email || '', novenaAmount: stagData[stag.tokenId]?.novenaAmount || '0' } })}
                         style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
                       />
                     </div>
@@ -323,7 +330,7 @@ export default function Home(): React.ReactNode {
                       <input
                         type="text"
                         value={stagData[stag.tokenId]?.discordId || ''}
-                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], discordId: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: stagData[stag.tokenId]?.email || '' } })}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], discordId: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: stagData[stag.tokenId]?.email || '', novenaAmount: stagData[stag.tokenId]?.novenaAmount || '0' } })}
                         placeholder="e.g., 123456789012345678"
                         style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
                       />
@@ -333,9 +340,19 @@ export default function Home(): React.ReactNode {
                       <input
                         type="email"
                         value={stagData[stag.tokenId]?.email || ''}
-                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], email: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', discordId: stagData[stag.tokenId]?.discordId || '' } })}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], email: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', discordId: stagData[stag.tokenId]?.discordId || '', novenaAmount: stagData[stag.tokenId]?.novenaAmount || '0' } })}
                         placeholder="e.g., user@example.com"
                         style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '150px' }}
+                      />
+                    </div>
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ marginRight: '10px' }}>Novena Amount (ETH, optional):</label>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={stagData[stag.tokenId]?.novenaAmount || '0'}
+                        onChange={(e) => setStagData({ ...stagData, [stag.tokenId]: { ...stagData[stag.tokenId], novenaAmount: e.target.value, timezone: stagData[stag.tokenId]?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', discordId: stagData[stag.tokenId]?.discordId || '', email: stagData[stag.tokenId]?.email || '' } })}
+                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '100px' }}
                       />
                     </div>
                     <button
