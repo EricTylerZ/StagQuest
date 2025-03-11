@@ -1,7 +1,7 @@
 const { put } = require('@vercel/blob');
 
 module.exports = async (req, res) => {
-  console.log('Discord callback hit with query:', req.query); // Debug
+  console.log('Discord callback hit with query:', req.query);
   const { code } = req.query;
   if (!code) {
     console.error('No code provided');
@@ -13,6 +13,7 @@ module.exports = async (req, res) => {
   const redirectUri = 'https://stag-quest.vercel.app/api/discord-callback';
 
   try {
+    console.log('Requesting token with clientId:', clientId, 'redirectUri:', redirectUri);
     const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -25,9 +26,10 @@ module.exports = async (req, res) => {
       }),
     });
     const tokenData = await tokenResponse.json();
+    console.log('Token response:', tokenData);
     if (!tokenData.access_token) {
       console.error('Failed to get access token:', tokenData);
-      return res.status(500).json({ error: 'Failed to get access token' });
+      return res.status(500).json({ error: 'Failed to get access token', details: tokenData });
     }
 
     const userResponse = await fetch('https://discord.com/api/users/@me', {
@@ -44,6 +46,6 @@ module.exports = async (req, res) => {
     res.redirect(`https://stag-quest.vercel.app/?discordId=${discordId}`);
   } catch (error) {
     console.error('OAuth error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 };

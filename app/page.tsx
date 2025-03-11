@@ -40,15 +40,18 @@ export default function Home(): React.ReactNode {
   useEffect(() => {
     setIsMounted(true);
     if (address) {
-      fetchStagStatus(address);
+      fetchStagStatus(address); // Initial fetch only on address change
       switchChain({ chainId: baseSepolia.id });
-      const urlParams = new URLSearchParams(window.location.search);
-      const discordId = urlParams.get('discordId');
-      if (discordId && stags.length > 0) {
-        setStagData(prev => ({ ...prev, [stags[0].tokenId]: { ...prev[stags[0].tokenId], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
-      }
     }
-  }, [address, switchChain, stags]);
+  }, [address, switchChain]); // Removed stags from deps
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const discordId = urlParams.get('discordId');
+    if (discordId && stags.length > 0) {
+      setStagData(prev => ({ ...prev, [stags[0].tokenId]: { ...prev[stags[0].tokenId], discordId, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '', novenaAmount: '0' } }));
+    }
+  }, [stags]); // Separate effect for OAuth redirect
 
   async function fetchStagStatus(address: string) {
     try {
