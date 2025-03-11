@@ -40,7 +40,10 @@ module.exports = async (req, res) => {
 
     const discordId = userData.id;
     const mapping = { stagIds: [], timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', email: '' };
-    await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { access: 'public' });
+    await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { 
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN // Explicitly pass token
+    });
 
     console.log('Redirecting to:', `https://stag-quest.vercel.app/?discordId=${discordId}`);
     res.redirect(`https://stag-quest.vercel.app/?discordId=${discordId}`);
