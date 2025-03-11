@@ -9,7 +9,7 @@ import contractABI from '../data/abi.json';
 
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
 const MINIMUM_MINT_AMOUNT = BigInt('100000000000000');
-const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&response_type=code&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&scope=identify';
+const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
 export default function Home(): React.ReactNode {
   const { address, isConnected } = useAccount();
@@ -52,15 +52,15 @@ export default function Home(): React.ReactNode {
 
   async function fetchStagStatus(address: string) {
     try {
-      console.log('Fetching status for address:', address); // Debug
+      console.log('Fetching status for address:', address);
       const response = await fetch(`${API_URL}/api/status`, { mode: 'cors', cache: 'no-cache' });
-      console.log('Response status:', response.status); // Debug
+      console.log('Response status:', response.status);
       if (!response.ok) {
         const text = await response.text();
         throw new Error(`Server error: ${response.status} - ${text}`);
       }
       const data = await response.json();
-      console.log('Status data:', data); // Debug
+      console.log('Status data:', data);
       if (data.stags) {
         const userStags = data.stags.filter((stag: any) => stag.owner.toLowerCase() === address.toLowerCase());
         setStags(isOwner ? data.stags : userStags);
@@ -393,14 +393,17 @@ export default function Home(): React.ReactNode {
                     >
                       {completePending ? 'Completing...' : 'Complete Novena'}
                     </button>
-                    <input
-                      type="number"
-                      min="0"
-                      max="9"
-                      value={batchDays[stag.tokenId] || '0'}
-                      onChange={(e) => setBatchDays({ ...batchDays, [stag.tokenId]: e.target.value })}
-                      style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '50px' }}
-                    />
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ marginRight: '10px' }}>How many successful days reported by the user? (0-9):</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="9"
+                        value={batchDays[stag.tokenId] || '0'}
+                        onChange={(e) => setBatchDays({ ...batchDays, [stag.tokenId]: e.target.value })}
+                        style={{ padding: '5px', borderRadius: '5px', border: '1px solid #ddd', width: '50px' }}
+                      />
+                    </div>
                   </>
                 )}
               </div>

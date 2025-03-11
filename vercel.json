@@ -1,7 +1,10 @@
 {
   "rewrites": [
     {"source": "/api/status", "destination": "/app.py"},
-    {"source": "/api/:path*", "destination": "/api/:path*"},
+    {"source": "/api/discord-callback", "destination": "/api/discord-callback.js"},
+    {"source": "/api/start-novena", "destination": "/api/start-novena.js"},
+    {"source": "/api/cron", "destination": "/api/cron.js"},
+    {"source": "/api/:path*", "destination": "/app.py"},
     {"source": "/(.*)", "destination": "/app"}
   ],
   "builds": [
