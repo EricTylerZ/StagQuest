@@ -18,15 +18,21 @@ module.exports = async (req, res) => {
     start_time: new Date().toISOString(),
     current_day: 1,
     responses: {},
-    timezone // e.g., "-7"
+    timezone
   };
 
   try {
-    await put(`novenas/${stagId}.json`, JSON.stringify(novena), { access: 'public' });
+    await put(`novenas/${stagId}.json`, JSON.stringify(novena), { 
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN // Add this from Vercel env vars
+    });
     console.log(`Stored novena/${stagId}.json:`, novena);
 
     const mapping = { stagIds: [Number(stagId)], timezone, email: email || '' };
-    await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { access: 'public' });
+    await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { 
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN
+    });
     console.log(`Stored discord_mappings/${discordId}.json:`, mapping);
 
     res.status(200).json({ message: 'Novena started' });
