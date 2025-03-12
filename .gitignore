@@ -26,7 +26,6 @@ docs/*.txt
 #node depenencies etc
 node_modules/
 package-lock.json
-package.json
 
 # Next.js build output
 .next/

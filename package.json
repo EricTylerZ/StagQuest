@@ -1,0 +1,46 @@
+{
+  "name": "stag-quest",
+  "version": "0.2.0",
+  "description": "StagQuest is a blockchain-based tool designed to help individuals break free from pornography and grow in virtue, with a focus on building a foundation for a future family. By minting an NFT (a \"stag\") and committing to a 9-day novena, users stake ETH to reinforce their resolve, aligning their journey with a mission to combat human trafficking and personal vice.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check-logs": "node scripts/check-logs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EricTylerZ/StagQuest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/EricTylerZ/StagQuest/issues"
+  },
+  "homepage": "https://github.com/EricTylerZ/StagQuest#readme",
+  "dependencies": {
+    "@coinbase/onchainkit": "^0.37.7", // Latest per npm
+    "@tanstack/react-query": "^5.67.2", // Latest
+    "@vercel/blob": "^0.27.2", // Latest
+    "@wagmi/connectors": "^5.7.8", // Latest
+    "discord.js": "^14.18.0", // Latest
+    "next": "^14.2.15", // Latest patched for CVEs
+    "pg": "^8.13.3", // Latest
+    "vercel": "^41.3.2", // Latest
+    "viem": "^2.23.9", // Latest
+    "wagmi": "^2.12.23" // Latest v2 for modern compatibility
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10", // Latest
+    "typescript": "^5.8.2" // Latest
+  }
+}
