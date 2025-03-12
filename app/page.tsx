@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ConnectWallet } from '@coinbase/onchainkit/wallet';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 import { ethers } from 'ethers';
 
-// Replace with your actual contract address if different
-const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5';
+// Replace with your actual contract address
+const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5' as const;
 
 // Full ABI for StagQuest contract
 const CONTRACT_ABI = [
@@ -86,10 +89,10 @@ const CONTRACT_ABI = [
   }
 ];
 
-// Using your provided Discord OAuth URL
+// Your provided Discord OAuth URL
 const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
-// Define stag type
+// Stag interface
 interface Stag {
   tokenId: number;
   owner: string;
@@ -99,11 +102,7 @@ interface Stag {
 }
 
 export default function Home() {
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
-  const [address, setAddress] = useState<string>('');
-  const [isOwner, setIsOwner] = useState<boolean>(false);
+  const { address, isConnected, chainId } = useAccount();
   const [stags, setStags] = useState<Stag[]>([]);
   const [mintAmount, setMintAmount] = useState<string>('0.0001');
   const [novenaAmount, setNovenaAmount] = useState<string>('0.0001');
@@ -111,145 +110,158 @@ export default function Home() {
   const [batchStagIds, setBatchStagIds] = useState<string>('');
   const [batchSuccesses, setBatchSuccesses] = useState<string>('');
 
-  // Initialize wallet connection and fetch stags
+  // Wagmi hooks for contract interactions
+  const { writeContract: mintStag, isPending: mintPending } = useWriteContract();
+  const { writeContract: startNovenaFn, isPending: novenaPending } = useWriteContract();
+  const { writeContract: completeNovenaFn, isPending: completePending } = useWriteContract();
+  const { writeContract: batchCompleteNovenaFn, isPending: batchPending } = useWriteContract();
+
+  // Check if user is the contract owner
+  const { data: owner } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'owner',
+    chainId: baseSepolia.id,
+  }) as { data: string | undefined };
+
+  const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
+
+  // Fetch stag statuses
   useEffect(() => {
-    const init = async () => {
-      if (!window.ethereum) {
-        alert('Please install MetaMask or another web3 wallet.');
-        return;
-      }
+    if (!isConnected || !address) return;
+
+    const fetchStagStatuses = async () => {
       try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const nextTokenId = await contract.nextTokenId();
+        const stags: Stag[] = [];
 
-        setProvider(provider);
-        setSigner(signer);
-        setAddress(address);
-        setContract(contract);
-
-        const owner = await contract.owner();
-        setIsOwner(address.toLowerCase() === owner.toLowerCase());
-
-        await fetchStagStatuses(contract, address, isOwner);
+        for (let i = 1; i < nextTokenId; i++) {
+          try {
+            const owner = await contract.ownerOf(i);
+            if (isOwner || owner.toLowerCase() === address.toLowerCase()) {
+              const familySize = await contract.familySize(i);
+              const hasActiveNovena = await contract.hasActiveNovena(i);
+              const successfulDays = await contract.successfulDays(i);
+              stags.push({
+                tokenId: i,
+                owner,
+                familySize: Number(familySize),
+                hasActiveNovena,
+                successfulDays: Number(successfulDays),
+              });
+            }
+          } catch (error) {
+            console.error(`Failed to fetch stag ${i}:`, error);
+          }
+        }
+        setStags(stags);
       } catch (error) {
-        console.error('Wallet connection failed:', error);
-        alert('Failed to connect wallet.');
+        console.error('Failed to fetch stags:', error);
       }
     };
-    init();
-  }, []);
 
-  // Fetch all stag details
-  const fetchStagStatuses = async (contract: ethers.Contract, address: string, isOwner: boolean) => {
-    try {
-      const nextTokenId = await contract.nextTokenId();
-      const stags: Stag[] = [];
-      for (let i = 1; i < nextTokenId; i++) {
-        try {
-          const owner = await contract.ownerOf(i);
-          if (isOwner || owner.toLowerCase() === address.toLowerCase()) {
-            const familySize = await contract.familySize(i);
-            const hasActiveNovena = await contract.hasActiveNovena(i);
-            const successfulDays = await contract.successfulDays(i);
-            stags.push({
-              tokenId: i,
-              owner,
-              familySize: Number(familySize),
-              hasActiveNovena,
-              successfulDays: Number(successfulDays),
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to fetch stag ${i}:`, error);
-        }
-      }
-      setStags(stags);
-    } catch (error) {
-      console.error('Failed to fetch stags:', error);
+    fetchStagStatuses();
+  }, [address, isConnected, isOwner]);
+
+  // Mint a stag
+  const handleMintStag = () => {
+    if (!isConnected || !address) {
+      alert('Please connect your wallet.');
+      return;
     }
+    const amountInWei = ethers.parseEther(mintAmount);
+    mintStag({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'mintStag',
+      chainId: baseSepolia.id,
+      value: amountInWei,
+    }, {
+      onSuccess: () => alert('Stag minted successfully!'),
+      onError: (error) => alert(`Minting failed: ${error.message}`),
+    });
   };
 
-  // Mint a new stag
-  const handleMintStag = async () => {
-    if (!contract) return;
-    try {
-      const weiAmount = ethers.parseEther(mintAmount);
-      const tx = await contract.mintStag({ value: weiAmount });
-      await tx.wait();
-      alert('Stag minted successfully!');
-      await fetchStagStatuses(contract, address, isOwner);
-    } catch (error) {
-      console.error('Mint failed:', error);
-      alert('Minting failed.');
-    }
-  };
-
-  // Start a novena and notify backend for Discord prompts
+  // Start a novena
   const handleStartNovena = async (stagId: number) => {
-    if (!contract) return;
-    try {
-      const weiAmount = ethers.parseEther(novenaAmount);
-      const tx = await contract.startNovena(stagId, { value: weiAmount });
-      await tx.wait();
-      alert('Novena started successfully!');
-
-      // Notify backend to start Discord prompts
-      await fetch('/api/start-novena', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stagId, ownerAddress: address }),
-      });
-
-      await fetchStagStatuses(contract, address, isOwner);
-    } catch (error) {
-      console.error('Novena start failed:', error);
-      alert('Failed to start novena.');
+    if (!isConnected || !address) {
+      alert('Please connect your wallet.');
+      return;
     }
+    if (chainId !== baseSepolia.id) {
+      alert('Please switch to Base Sepolia network.');
+      return;
+    }
+    const amountInWei = ethers.parseEther(novenaAmount);
+    startNovenaFn({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'startNovena',
+      chainId: baseSepolia.id,
+      args: [BigInt(stagId)],
+      value: amountInWei,
+    }, {
+      onSuccess: async () => {
+        alert('Novena started successfully!');
+        // Notify backend for Discord prompts
+        await fetch('/api/start-novena', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stagId, ownerAddress: address }),
+        });
+      },
+      onError: (error) => alert(`Failed to start novena: ${error.message}`),
+    });
   };
 
   // Complete a novena (admin only)
-  const handleCompleteNovena = async (stagId: number) => {
-    if (!contract || !isOwner) return;
+  const handleCompleteNovena = (stagId: number) => {
+    if (!isConnected || !isOwner) return;
     const days = parseInt(successfulDays[stagId] || '0');
-    if (isNaN(days) || days < 0 || days > 9) {
-      alert('Successful days must be between 0 and 9.');
+    if (isNaN(days) || days > 9) {
+      alert('Successful days must be 0-9.');
       return;
     }
-    try {
-      const tx = await contract.completeNovena(stagId, days);
-      await tx.wait();
-      alert('Novena completed successfully!');
-      await fetchStagStatuses(contract, address, isOwner);
-    } catch (error) {
-      console.error('Completion failed:', error);
-      alert('Failed to complete novena.');
-    }
+    completeNovenaFn({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'completeNovena',
+      chainId: baseSepolia.id,
+      args: [BigInt(stagId), days],
+    }, {
+      onSuccess: () => alert('Novena completed successfully!'),
+      onError: (error) => alert(`Failed to complete novena: ${error.message}`),
+    });
   };
 
   // Batch complete novenas (admin only)
-  const handleBatchCompleteNovena = async () => {
-    if (!contract || !isOwner) return;
-    const stagIds = batchStagIds.split(',').map(id => parseInt(id.trim()));
+  const handleBatchCompleteNovena = () => {
+    if (!isConnected || !isOwner) return;
+    const stagIds = batchStagIds.split(',').map(id => BigInt(id.trim()));
     const successes = batchSuccesses.split(',').map(s => parseInt(s.trim()));
-    if (stagIds.length !== successes.length || stagIds.some(isNaN) || successes.some(s => s < 0 || s > 9)) {
-      alert('Invalid batch data: check stag IDs and successful days (0-9).');
+    if (stagIds.length === 0 || stagIds.length !== successes.length || successes.some(d => d > 9)) {
+      alert('Invalid batch data: ensure all Stag IDs have valid days (0-9).');
       return;
     }
-    try {
-      const tx = await contract.batchCompleteNovena(stagIds, successes);
-      await tx.wait();
-      alert('Batch completed successfully!');
-      await fetchStagStatuses(contract, address, isOwner);
-    } catch (error) {
-      console.error('Batch failed:', error);
-      alert('Batch completion failed.');
-    }
+    batchCompleteNovenaFn({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'batchCompleteNovena',
+      chainId: baseSepolia.id,
+      args: [stagIds, successes],
+    }, {
+      onSuccess: () => {
+        alert('Batch novena completion successful!');
+        setBatchStagIds('');
+        setBatchSuccesses('');
+      },
+      onError: (error) => alert(`Batch completion failed: ${error.message}`),
+    });
   };
 
-  // Discord login redirect
+  // Discord login
   const handleDiscordLogin = () => {
     window.location.href = DISCORD_OAUTH_URL;
   };
@@ -258,23 +270,47 @@ export default function Home() {
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>StagQuest {isOwner ? '(Admin)' : ''}</h1>
-        <button onClick={handleDiscordLogin}>Login with Discord</button>
+        <div>
+          <ConnectWallet 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 min-w-[150px] text-center"
+            text={isConnected ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}` : 'Connect Wallet'}
+          />
+          <button
+            onClick={handleDiscordLogin}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#7289da',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginLeft: '10px',
+            }}
+          >
+            Login with Discord
+          </button>
+        </div>
       </header>
 
-      {address ? (
+      {isConnected ? (
         <main>
           {/* Mint Section */}
           <div style={{ marginBottom: '20px' }}>
-            <h2>Mint a Stag</h2>
+            <label>Mint Amount (ETH, min 0.0001):</label>
             <input
               type="number"
               step="0.0001"
               value={mintAmount}
               onChange={(e) => setMintAmount(e.target.value)}
-              placeholder="Amount in ETH"
-              style={{ marginRight: '10px' }}
+              style={{ padding: '5px', marginRight: '10px' }}
             />
-            <button onClick={handleMintStag}>Mint Stag</button>
+            <button
+              onClick={handleMintStag}
+              disabled={mintPending}
+              style={{ padding: '10px 20px', backgroundColor: mintPending ? '#ccc' : '#0070f3', color: 'white' }}
+            >
+              {mintPending ? 'Minting...' : 'Mint Stag'}
+            </button>
           </div>
 
           {/* Stag List */}
@@ -282,11 +318,11 @@ export default function Home() {
           {stags.length > 0 ? (
             stags.map((stag) => (
               <div key={stag.tokenId} style={{ border: '1px solid #ddd', padding: '10px', marginBottom: '10px' }}>
-                <p><strong>Stag ID:</strong> {stag.tokenId}</p>
-                <p><strong>Owner:</strong> {stag.owner}</p>
-                <p><strong>Family Size:</strong> {stag.familySize}</p>
-                <p><strong>Active Novena:</strong> {stag.hasActiveNovena ? 'Yes' : 'No'}</p>
-                <p><strong>Successful Days:</strong> {stag.successfulDays}</p>
+                <p>Stag ID: {stag.tokenId}</p>
+                <p>Owner: {stag.owner}</p>
+                <p>Family Size: {stag.familySize}</p>
+                <p>Active Novena: {stag.hasActiveNovena ? 'Yes' : 'No'}</p>
+                <p>Successful Days: {stag.successfulDays}</p>
 
                 {!stag.hasActiveNovena && (
                   <>
@@ -295,10 +331,16 @@ export default function Home() {
                       step="0.0001"
                       value={novenaAmount}
                       onChange={(e) => setNovenaAmount(e.target.value)}
-                      placeholder="Amount in ETH"
+                      placeholder="Novena Amount (ETH)"
                       style={{ marginRight: '10px' }}
                     />
-                    <button onClick={() => handleStartNovena(stag.tokenId)}>Start Novena</button>
+                    <button
+                      onClick={() => handleStartNovena(stag.tokenId)}
+                      disabled={novenaPending}
+                      style={{ padding: '5px 10px', backgroundColor: novenaPending ? '#ccc' : '#4CAF50', color: 'white' }}
+                    >
+                      {novenaPending ? 'Starting...' : 'Start Novena'}
+                    </button>
                   </>
                 )}
 
@@ -313,7 +355,13 @@ export default function Home() {
                       placeholder="Successful Days (0-9)"
                       style={{ marginRight: '10px' }}
                     />
-                    <button onClick={() => handleCompleteNovena(stag.tokenId)}>Complete Novena</button>
+                    <button
+                      onClick={() => handleCompleteNovena(stag.tokenId)}
+                      disabled={completePending}
+                      style={{ padding: '5px 10px', backgroundColor: completePending ? '#ccc' : '#F44336', color: 'white' }}
+                    >
+                      {completePending ? 'Completing...' : 'Complete Novena'}
+                    </button>
                   </>
                 )}
               </div>
@@ -340,7 +388,13 @@ export default function Home() {
                 placeholder="Successful Days (comma-separated)"
                 style={{ marginRight: '10px' }}
               />
-              <button onClick={handleBatchCompleteNovena}>Batch Complete</button>
+              <button
+                onClick={handleBatchCompleteNovena}
+                disabled={batchPending}
+                style={{ padding: '5px 10px', backgroundColor: batchPending ? '#ccc' : '#2196F3', color: 'white' }}
+              >
+                {batchPending ? 'Completing...' : 'Batch Complete'}
+              </button>
             </div>
           )}
         </main>

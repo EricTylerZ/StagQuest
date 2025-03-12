@@ -8,10 +8,7 @@ import { injected, coinbaseWallet } from 'wagmi/connectors';
 
 const config = createConfig({
   chains: [baseSepolia],
-  connectors: [
-    injected(), // Generic injected connector for all wallets
-    coinbaseWallet(),
-  ],
+  connectors: [injected(), coinbaseWallet()],
   transports: { [baseSepolia.id]: http('https://sepolia.base.org') },
 });
 
