@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { ethers } from 'ethers';
 
@@ -12,7 +12,6 @@ const ConnectWallet = dynamic(() => import('@coinbase/onchainkit/wallet').then(m
 // Replace with your actual contract address
 const CONTRACT_ADDRESS = '0x5E1557B4C7Fc5268512E98662F23F923042FF5c5' as const;
 
-// Full ABI for StagQuest contract
 const CONTRACT_ABI = [
   {
     "inputs": [],
@@ -92,10 +91,9 @@ const CONTRACT_ABI = [
   }
 ];
 
-// Your provided Discord OAuth URL
 const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
-// Stag interface for blockchain data
+// Interfaces
 interface Stag {
   tokenId: number;
   owner: string;
@@ -104,11 +102,22 @@ interface Stag {
   successfulDays: number;
 }
 
-// Metadata interface for user-entered data
 interface StagMetadata {
   discordId: string;
   email: string;
-  utcOffset: string; // e.g., "-7" for Denver
+  utcOffset: string;
+  preferredChannel: 'discord' | 'email' | 'text' | 'telegram';
+}
+
+interface UserProfile {
+  walletAddress: string;
+  discordId: string;
+  email: string;
+  phone?: string;
+  telegram?: string;
+  utcOffset: string;
+  preferredChannel: 'discord' | 'email' | 'text' | 'telegram';
+  stagData: { [key: number]: StagMetadata };
 }
 
 export default function Home() {
@@ -120,14 +129,19 @@ export default function Home() {
   const [batchStagIds, setBatchStagIds] = useState<string>('');
   const [batchSuccesses, setBatchSuccesses] = useState<string>('');
   const [stagData, setStagData] = useState<{ [key: number]: StagMetadata }>({});
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [pendingStagId, setPendingStagId] = useState<number | null>(null); // Track stagId for novena start
 
-  // Wagmi hooks for contract interactions
-  const { writeContract: mintStag, isPending: mintPending } = useWriteContract();
-  const { writeContract: startNovenaFn, isPending: novenaPending } = useWriteContract();
-  const { writeContract: completeNovenaFn, isPending: completePending } = useWriteContract();
-  const { writeContract: batchCompleteNovenaFn, isPending: batchPending } = useWriteContract();
+  const { writeContract: mintStag, data: mintTxHash, isPending: mintPending } = useWriteContract();
+  const { writeContract: startNovenaFn, data: startTxHash, isPending: novenaPending } = useWriteContract();
+  const { writeContract: completeNovenaFn, data: completeTxHash, isPending: completePending } = useWriteContract();
+  const { writeContract: batchCompleteNovenaFn, data: batchTxHash, isPending: batchPending } = useWriteContract();
 
-  // Check if user is the contract owner
+  const mintReceipt = useWaitForTransactionReceipt({ hash: mintTxHash });
+  const startReceipt = useWaitForTransactionReceipt({ hash: startTxHash });
+  const completeReceipt = useWaitForTransactionReceipt({ hash: completeTxHash });
+  const batchReceipt = useWaitForTransactionReceipt({ hash: batchTxHash });
+
   const { data: owner } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
@@ -136,6 +150,42 @@ export default function Home() {
   }) as { data: string | undefined };
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
+
+  // Fetch user profile from Blob
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isConnected || !address) return;
+      try {
+        const response = await fetch(`https://pmqhhpdds64stpmu.public.blob.vercel-storage.com/users/${address}.json`);
+        if (response.ok) {
+          const profile: UserProfile = await response.json();
+          setUserProfile(profile);
+          setStagData(profile.stagData || {});
+        } else {
+          // Initialize default profile if none exists
+          const defaultProfile: UserProfile = {
+            walletAddress: address,
+            discordId: '',
+            email: '',
+            phone: '',
+            telegram: '',
+            utcOffset: '-7',
+            preferredChannel: 'discord',
+            stagData: {},
+          };
+          setUserProfile(defaultProfile);
+          await fetch(`https://pmqhhpdds64stpmu.public.blob.vercel-storage.com/users/${address}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(defaultProfile),
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+    fetchUserProfile();
+  }, [address, isConnected]);
 
   // Fetch stag statuses from blockchain
   const fetchStagStatuses = async () => {
@@ -165,7 +215,6 @@ export default function Home() {
           console.error(`Failed to fetch stag ${i}:`, error);
         }
       }
-      // Preserve existing metadata
       setStags(newStags.map(stag => ({
         ...stag,
         ...stagData[stag.tokenId],
@@ -179,8 +228,32 @@ export default function Home() {
     fetchStagStatuses();
   }, [address, isConnected, isOwner]);
 
+  // Save user profile and stag data to Blob
+  const saveUserProfile = async () => {
+    if (!address || !userProfile) return;
+    const profile: UserProfile = {
+      walletAddress: address,
+      discordId: userProfile.discordId,
+      email: userProfile.email,
+      phone: userProfile.phone,
+      telegram: userProfile.telegram,
+      utcOffset: userProfile.utcOffset,
+      preferredChannel: userProfile.preferredChannel,
+      stagData,
+    };
+    try {
+      await fetch(`https://pmqhhpdds64stpmu.public.blob.vercel-storage.com/users/${address}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+    } catch (error) {
+      console.error('Failed to save user profile:', error);
+    }
+  };
+
   // Mint a stag
-  const handleMintStag = () => {
+  const handleMintStag = async () => {
     if (!isConnected || !address) {
       alert('Please connect your wallet.');
       return;
@@ -192,14 +265,18 @@ export default function Home() {
       functionName: 'mintStag',
       chainId: baseSepolia.id,
       value: amountInWei,
-    }, {
-      onSuccess: () => {
-        alert('Stag minted successfully!');
-        fetchStagStatuses();
-      },
-      onError: (error: Error) => alert(`Minting failed: ${error.message}`),
     });
   };
+
+  useEffect(() => {
+    if (mintReceipt.data?.status === 'success') {
+      alert('Stag minted successfully!');
+      fetchStagStatuses();
+      saveUserProfile();
+    } else if (mintReceipt.data?.status === 'reverted') {
+      alert('Minting failed on blockchain.');
+    }
+  }, [mintReceipt.data]);
 
   // Start a novena
   const handleStartNovena = async (stagId: number) => {
@@ -211,14 +288,16 @@ export default function Home() {
       alert('Please switch to Base Sepolia network.');
       return;
     }
-    const discordId = stagData[stagId]?.discordId || '';
-    const email = stagData[stagId]?.email || '';
-    const utcOffset = stagData[stagId]?.utcOffset || '-7'; // Default to Denver
-    if (!discordId) {
+    const discordId = stagData[stagId]?.discordId || userProfile?.discordId || '';
+    const email = stagData[stagId]?.email || userProfile?.email || '';
+    const utcOffset = stagData[stagId]?.utcOffset || userProfile?.utcOffset || '-7';
+    const preferredChannel = stagData[stagId]?.preferredChannel || userProfile?.preferredChannel || 'discord';
+    if (!discordId && preferredChannel === 'discord') {
       alert('Please enter a Discord ID for this stag.');
       return;
     }
     const amountInWei = ethers.parseEther(novenaAmount);
+    setPendingStagId(stagId); // Set the stagId being processed
     startNovenaFn({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -226,24 +305,50 @@ export default function Home() {
       chainId: baseSepolia.id,
       args: [BigInt(stagId)],
       value: amountInWei,
-    }, {
-      onSuccess: async () => {
-        alert('Novena started successfully!');
-        await fetch('/api/start-novena', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ stagId, ownerAddress: address, timezone: utcOffset, discordId, email }),
-        });
-        // Update stagData with the latest values
-        setStagData(prev => ({
-          ...prev,
-          [stagId]: { discordId, email, utcOffset }
-        }));
-        fetchStagStatuses();
-      },
-      onError: (error: Error) => alert(`Failed to start novena: ${error.message}`),
     });
   };
+
+  useEffect(() => {
+    const confirmStartNovena = async () => {
+      if (startReceipt.data?.status === 'success' && pendingStagId !== null) {
+        const stagId = pendingStagId; // Use the tracked stagId
+        const response = await fetch('/api/start-novena', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stagId,
+            ownerAddress: address,
+            timezone: stagData[stagId]?.utcOffset || userProfile?.utcOffset || '-7',
+            discordId: stagData[stagId]?.discordId || userProfile?.discordId || '',
+            email: stagData[stagId]?.email || userProfile?.email || '',
+            preferredChannel: stagData[stagId]?.preferredChannel || userProfile?.preferredChannel || 'discord',
+          }),
+        });
+        if (response.ok) {
+          alert('Novena started successfully!');
+          setStagData(prev => ({
+            ...prev,
+            [stagId]: {
+              discordId: stagData[stagId]?.discordId || userProfile?.discordId || '',
+              email: stagData[stagId]?.email || userProfile?.email || '',
+              utcOffset: stagData[stagId]?.utcOffset || userProfile?.utcOffset || '-7',
+              preferredChannel: stagData[stagId]?.preferredChannel || userProfile?.preferredChannel || 'discord',
+            },
+          }));
+          fetchStagStatuses();
+          saveUserProfile();
+          setPendingStagId(null); // Reset after success
+        } else {
+          alert('Failed to start novena on backend.');
+          setPendingStagId(null);
+        }
+      } else if (startReceipt.data?.status === 'reverted') {
+        alert('Novena start failed on blockchain.');
+        setPendingStagId(null);
+      }
+    };
+    if (startTxHash) confirmStartNovena();
+  }, [startReceipt.data, startTxHash, address, stagData, userProfile, pendingStagId]);
 
   // Complete a novena (admin only)
   const handleCompleteNovena = (stagId: number) => {
@@ -259,14 +364,18 @@ export default function Home() {
       functionName: 'completeNovena',
       chainId: baseSepolia.id,
       args: [BigInt(stagId), days],
-    }, {
-      onSuccess: () => {
-        alert('Novena completed successfully!');
-        fetchStagStatuses();
-      },
-      onError: (error: Error) => alert(`Failed to complete novena: ${error.message}`),
     });
   };
+
+  useEffect(() => {
+    if (completeReceipt.data?.status === 'success') {
+      alert('Novena completed successfully!');
+      fetchStagStatuses();
+      saveUserProfile();
+    } else if (completeReceipt.data?.status === 'reverted') {
+      alert('Novena completion failed on blockchain.');
+    }
+  }, [completeReceipt.data]);
 
   // Batch complete novenas (admin only)
   const handleBatchCompleteNovena = () => {
@@ -283,16 +392,20 @@ export default function Home() {
       functionName: 'batchCompleteNovena',
       chainId: baseSepolia.id,
       args: [stagIds, successes],
-    }, {
-      onSuccess: () => {
-        alert('Batch novena completion successful!');
-        setBatchStagIds('');
-        setBatchSuccesses('');
-        fetchStagStatuses();
-      },
-      onError: (error: Error) => alert(`Batch completion failed: ${error.message}`),
     });
   };
+
+  useEffect(() => {
+    if (batchReceipt.data?.status === 'success') {
+      alert('Batch novena completion successful!');
+      setBatchStagIds('');
+      setBatchSuccesses('');
+      fetchStagStatuses();
+      saveUserProfile();
+    } else if (batchReceipt.data?.status === 'reverted') {
+      alert('Batch completion failed on blockchain.');
+    }
+  }, [batchReceipt.data]);
 
   // Refresh stag statuses
   const handleRefreshStatus = () => {
@@ -333,6 +446,67 @@ export default function Home() {
 
       {isConnected ? (
         <main>
+          {/* User Profile */}
+          <div style={{ marginBottom: '20px' }}>
+            <h2>Your Profile</h2>
+            <label>Discord ID:</label>
+            <input
+              type="text"
+              value={userProfile?.discordId || ''}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, discordId: e.target.value } : null)}
+              onBlur={saveUserProfile}
+              placeholder="e.g., 123456789012345678"
+              style={{ padding: '5px', marginRight: '10px', width: '200px' }}
+            />
+            <label>Email:</label>
+            <input
+              type="email"
+              value={userProfile?.email || ''}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
+              onBlur={saveUserProfile}
+              placeholder="e.g., user@example.com"
+              style={{ padding: '5px', marginRight: '10px', width: '200px' }}
+            />
+            <label>Phone (future):</label>
+            <input
+              type="text"
+              value={userProfile?.phone || ''}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, phone: e.target.value } : null)}
+              onBlur={saveUserProfile}
+              placeholder="e.g., +1234567890"
+              style={{ padding: '5px', marginRight: '10px', width: '200px' }}
+            />
+            <label>Telegram (future):</label>
+            <input
+              type="text"
+              value={userProfile?.telegram || ''}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, telegram: e.target.value } : null)}
+              onBlur={saveUserProfile}
+              placeholder="e.g., @username"
+              style={{ padding: '5px', marginRight: '10px', width: '200px' }}
+            />
+            <label>UTC Offset:</label>
+            <input
+              type="number"
+              value={userProfile?.utcOffset || '-7'}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, utcOffset: e.target.value } : null)}
+              onBlur={saveUserProfile}
+              style={{ padding: '5px', marginRight: '10px', width: '100px' }}
+            />
+            <label>Preferred Channel:</label>
+            <select
+              value={userProfile?.preferredChannel || 'discord'}
+              onChange={(e) => setUserProfile(prev => prev ? { ...prev, preferredChannel: e.target.value as 'discord' | 'email' | 'text' | 'telegram' } : null)}
+              onBlur={saveUserProfile}
+              style={{ padding: '5px' }}
+            >
+              <option value="discord">Discord</option>
+              <option value="email">Email</option>
+              <option value="text">Text (future)</option>
+              <option value="telegram">Telegram (future)</option>
+            </select>
+          </div>
+
           {/* Mint Section */}
           <div style={{ marginBottom: '20px' }}>
             <label>Mint Amount (ETH, min 0.0001):</label>
@@ -405,15 +579,17 @@ export default function Home() {
                   <label>Discord ID:</label>
                   <input
                     type="text"
-                    value={stagData[stag.tokenId]?.discordId || ''}
+                    value={stagData[stag.tokenId]?.discordId || userProfile?.discordId || ''}
                     onChange={(e) => setStagData({
                       ...stagData,
                       [stag.tokenId]: { 
                         discordId: e.target.value, 
-                        email: stagData[stag.tokenId]?.email || '', 
-                        utcOffset: stagData[stag.tokenId]?.utcOffset || '-7' 
+                        email: stagData[stag.tokenId]?.email || userProfile?.email || '', 
+                        utcOffset: stagData[stag.tokenId]?.utcOffset || userProfile?.utcOffset || '-7',
+                        preferredChannel: stagData[stag.tokenId]?.preferredChannel || userProfile?.preferredChannel || 'discord'
                       }
                     })}
+                    onBlur={saveUserProfile}
                     placeholder="e.g., 123456789012345678"
                     style={{ padding: '5px', marginRight: '10px', width: '200px' }}
                   />
@@ -422,34 +598,60 @@ export default function Home() {
                   <label>Email:</label>
                   <input
                     type="email"
-                    value={stagData[stag.tokenId]?.email || ''}
+                    value={stagData[stag.tokenId]?.email || userProfile?.email || ''}
                     onChange={(e) => setStagData({
                       ...stagData,
                       [stag.tokenId]: { 
-                        discordId: stagData[stag.tokenId]?.discordId || '', 
+                        discordId: stagData[stag.tokenId]?.discordId || userProfile?.discordId || '', 
                         email: e.target.value, 
-                        utcOffset: stagData[stag.tokenId]?.utcOffset || '-7' 
+                        utcOffset: stagData[stag.tokenId]?.utcOffset || userProfile?.utcOffset || '-7',
+                        preferredChannel: stagData[stag.tokenId]?.preferredChannel || userProfile?.preferredChannel || 'discord'
                       }
                     })}
+                    onBlur={saveUserProfile}
                     placeholder="e.g., user@example.com"
                     style={{ padding: '5px', marginRight: '10px', width: '200px' }}
                   />
                 </div>
                 <div style={{ marginTop: '10px' }}>
-                  <label>UTC Offset (e.g., -7 for Denver):</label>
+                  <label>UTC Offset:</label>
                   <input
                     type="number"
-                    value={stagData[stag.tokenId]?.utcOffset || '-7'}
+                    value={stagData[stag.tokenId]?.utcOffset || userProfile?.utcOffset || '-7'}
                     onChange={(e) => setStagData({
                       ...stagData,
                       [stag.tokenId]: { 
-                        discordId: stagData[stag.tokenId]?.discordId || '', 
-                        email: stagData[stag.tokenId]?.email || '', 
-                        utcOffset: e.target.value 
+                        discordId: stagData[stag.tokenId]?.discordId || userProfile?.discordId || '', 
+                        email: stagData[stag.tokenId]?.email || userProfile?.email || '', 
+                        utcOffset: e.target.value,
+                        preferredChannel: stagData[stag.tokenId]?.preferredChannel || userProfile?.preferredChannel || 'discord'
                       }
                     })}
+                    onBlur={saveUserProfile}
                     style={{ padding: '5px', marginRight: '10px', width: '100px' }}
                   />
+                </div>
+                <div style={{ marginTop: '10px' }}>
+                  <label>Preferred Channel:</label>
+                  <select
+                    value={stagData[stag.tokenId]?.preferredChannel || userProfile?.preferredChannel || 'discord'}
+                    onChange={(e) => setStagData({
+                      ...stagData,
+                      [stag.tokenId]: { 
+                        discordId: stagData[stag.tokenId]?.discordId || userProfile?.discordId || '', 
+                        email: stagData[stag.tokenId]?.email || userProfile?.email || '', 
+                        utcOffset: stagData[stag.tokenId]?.utcOffset || userProfile?.utcOffset || '-7',
+                        preferredChannel: e.target.value as 'discord' | 'email' | 'text' | 'telegram'
+                      }
+                    })}
+                    onBlur={saveUserProfile}
+                    style={{ padding: '5px' }}
+                  >
+                    <option value="discord">Discord</option>
+                    <option value="email">Email</option>
+                    <option value="text">Text (future)</option>
+                    <option value="telegram">Telegram (future)</option>
+                  </select>
                 </div>
 
                 {!stag.hasActiveNovena && (
@@ -479,7 +681,7 @@ export default function Home() {
                       min="0"
                       max="9"
                       value={successfulDays[stag.tokenId] || ''}
-                      onChange={(e) => setSuccessfulDays({ ...successfulDays, [stag.tokenId]: e.target.value })}
+                      onChange={(e) => setSuccessfulDays(prev => ({ ...prev, [stag.tokenId]: e.target.value }))}
                       placeholder="Successful Days (0-9)"
                       style={{ marginRight: '10px', padding: '5px' }}
                     />
