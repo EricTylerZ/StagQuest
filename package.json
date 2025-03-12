@@ -28,19 +28,19 @@
   },
   "homepage": "https://github.com/EricTylerZ/StagQuest#readme",
   "dependencies": {
-    "@coinbase/onchainkit": "^0.37.7", // Latest per npm
-    "@tanstack/react-query": "^5.67.2", // Latest
-    "@vercel/blob": "^0.27.2", // Latest
-    "@wagmi/connectors": "^5.7.8", // Latest
-    "discord.js": "^14.18.0", // Latest
-    "next": "^14.2.15", // Latest patched for CVEs
-    "pg": "^8.13.3", // Latest
-    "vercel": "^41.3.2", // Latest
-    "viem": "^2.23.9", // Latest
-    "wagmi": "^2.12.23" // Latest v2 for modern compatibility
+    "@coinbase/onchainkit": "^0.37.7",
+    "@tanstack/react-query": "^5.67.3",
+    "@vercel/blob": "^0.27.2",
+    "@wagmi/connectors": "^5.7.9",
+    "discord.js": "^14.18.0",
+    "next": "^15.2.2",
+    "pg": "^8.14.0",
+    "vercel": "^41.4.0",
+    "viem": "^2.23.10",
+    "wagmi": "^2.14.13"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10", // Latest
-    "typescript": "^5.8.2" // Latest
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
   }
 }
