@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     start_time: new Date().toISOString(),
     current_day: 1,
     responses: {},
-    timezone
+    timezone // e.g., "-7" for Denver
   };
 
   try {

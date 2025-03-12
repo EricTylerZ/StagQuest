@@ -12,7 +12,32 @@ const client = new Client({
 
 client.on('ready', () => {
   console.log('Bot is ready!');
+  // Check novenas every minute
+  setInterval(checkNovenas, 60000);
 });
+
+async function checkNovenas() {
+  const { blobs } = await get({ prefix: 'novenas/' });
+  for (const blob of blobs) {
+    const novena = JSON.parse(blob.data);
+    const startTime = new Date(novena.start_time);
+    const now = new Date();
+    const utcOffset = parseInt(novena.timezone); // e.g., -7
+    const localTime = new Date(now.getTime() + utcOffset * 60 * 60 * 1000);
+    const daysElapsed = Math.floor((localTime - startTime) / (1000 * 60 * 60 * 24));
+
+    if (daysElapsed < 9 && novena.current_day <= daysElapsed + 1) {
+      try {
+        const user = await client.users.fetch(novena.discord_id);
+        await user.send(`Day ${novena.current_day} of your novena for Stag ID ${novena.stag_id}. Keep it up!`);
+        novena.current_day++;
+        await put(`novenas/${novena.stag_id}.json`, JSON.stringify(novena), { access: 'public' });
+      } catch (error) {
+        console.error(`Failed to send DM for stag ${novena.stag_id}:`, error);
+      }
+    }
+  }
+}
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
@@ -24,8 +49,6 @@ client.on('messageCreate', async (message) => {
     } else {
       // Handle novena responses
       const userId = message.author.id;
-      // Placeholder logic for novena processing
-      // Replace with actual novena lookup and response handling later
       message.reply('Your response has been recorded.');
     }
   } catch (error) {

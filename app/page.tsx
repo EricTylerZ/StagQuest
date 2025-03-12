@@ -95,15 +95,20 @@ const CONTRACT_ABI = [
 // Your provided Discord OAuth URL
 const DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=1348188422367477842&redirect_uri=https%3A%2F%2Fstag-quest.vercel.app%2Fapi%2Fdiscord-callback&response_type=code&scope=identify';
 
-// Stag interface with Discord and email
+// Stag interface for blockchain data
 interface Stag {
   tokenId: number;
   owner: string;
   familySize: number;
   hasActiveNovena: boolean;
   successfulDays: number;
-  discordId?: string;
-  email?: string;
+}
+
+// Metadata interface for user-entered data
+interface StagMetadata {
+  discordId: string;
+  email: string;
+  utcOffset: string; // e.g., "-7" for Denver
 }
 
 export default function Home() {
@@ -114,7 +119,7 @@ export default function Home() {
   const [successfulDays, setSuccessfulDays] = useState<{ [key: number]: string }>({});
   const [batchStagIds, setBatchStagIds] = useState<string>('');
   const [batchSuccesses, setBatchSuccesses] = useState<string>('');
-  const [stagData, setStagData] = useState<{ [key: number]: { discordId: string; email: string } }>({});
+  const [stagData, setStagData] = useState<{ [key: number]: StagMetadata }>({});
 
   // Wagmi hooks for contract interactions
   const { writeContract: mintStag, isPending: mintPending } = useWriteContract();
@@ -132,14 +137,14 @@ export default function Home() {
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
-  // Fetch stag statuses
+  // Fetch stag statuses from blockchain
   const fetchStagStatuses = async () => {
     if (!isConnected || !address) return;
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
       const nextTokenId = await contract.nextTokenId();
-      const stags: Stag[] = [];
+      const newStags: Stag[] = [];
 
       for (let i = 1; i < nextTokenId; i++) {
         try {
@@ -148,21 +153,25 @@ export default function Home() {
             const familySize = await contract.familySize(i);
             const hasActiveNovena = await contract.hasActiveNovena(i);
             const successfulDays = await contract.successfulDays(i);
-            stags.push({
+            newStags.push({
               tokenId: i,
               owner,
               familySize: Number(familySize),
               hasActiveNovena,
               successfulDays: Number(successfulDays),
-              discordId: stagData[i]?.discordId || '',
-              email: stagData[i]?.email || '',
             });
           }
         } catch (error) {
           console.error(`Failed to fetch stag ${i}:`, error);
         }
       }
-      setStags(stags);
+      // Merge with existing metadata
+      setStags(newStags.map(stag => ({
+        ...stag,
+        discordId: stagData[stag.tokenId]?.discordId,
+        email: stagData[stag.tokenId]?.email,
+        utcOffset: stagData[stag.tokenId]?.utcOffset,
+      })));
     } catch (error) {
       console.error('Failed to fetch stags:', error);
     }
@@ -206,6 +215,7 @@ export default function Home() {
     }
     const discordId = stagData[stagId]?.discordId || '';
     const email = stagData[stagId]?.email || '';
+    const utcOffset = stagData[stagId]?.utcOffset || '-7'; // Default to Denver
     if (!discordId) {
       alert('Please enter a Discord ID for this stag.');
       return;
@@ -224,7 +234,7 @@ export default function Home() {
         await fetch('/api/start-novena', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ stagId, ownerAddress: address, discordId, email }),
+          body: JSON.stringify({ stagId, ownerAddress: address, timezone: utcOffset, discordId, email }),
         });
         fetchStagStatuses();
       },
@@ -395,7 +405,11 @@ export default function Home() {
                     value={stagData[stag.tokenId]?.discordId || ''}
                     onChange={(e) => setStagData({
                       ...stagData,
-                      [stag.tokenId]: { ...stagData[stag.tokenId], discordId: e.target.value, email: stagData[stag.tokenId]?.email || '' }
+                      [stag.tokenId]: { 
+                        discordId: e.target.value, 
+                        email: stagData[stag.tokenId]?.email || '', 
+                        utcOffset: stagData[stag.tokenId]?.utcOffset || '-7' 
+                      }
                     })}
                     placeholder="e.g., 123456789012345678"
                     style={{ padding: '5px', marginRight: '10px', width: '200px' }}
@@ -408,10 +422,30 @@ export default function Home() {
                     value={stagData[stag.tokenId]?.email || ''}
                     onChange={(e) => setStagData({
                       ...stagData,
-                      [stag.tokenId]: { ...stagData[stag.tokenId], email: e.target.value, discordId: stagData[stag.tokenId]?.discordId || '' }
+                      [stag.tokenId]: { 
+                        discordId: stagData[stag.tokenId]?.discordId || '', 
+                        email: e.target.value, 
+                        utcOffset: stagData[stag.tokenId]?.utcOffset || '-7' 
+                      }
                     })}
                     placeholder="e.g., user@example.com"
                     style={{ padding: '5px', marginRight: '10px', width: '200px' }}
+                  />
+                </div>
+                <div style={{ marginTop: '10px' }}>
+                  <label>UTC Offset (e.g., -7 for Denver):</label>
+                  <input
+                    type="number"
+                    value={stagData[stag.tokenId]?.utcOffset || '-7'}
+                    onChange={(e) => setStagData({
+                      ...stagData,
+                      [stag.tokenId]: { 
+                        discordId: stagData[stag.tokenId]?.discordId || '', 
+                        email: stagData[stag.tokenId]?.email || '', 
+                        utcOffset: e.target.value 
+                      }
+                    })}
+                    style={{ padding: '5px', marginRight: '10px', width: '100px' }}
                   />
                 </div>
 
