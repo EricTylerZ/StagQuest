@@ -165,12 +165,10 @@ export default function Home() {
           console.error(`Failed to fetch stag ${i}:`, error);
         }
       }
-      // Merge with existing metadata
+      // Preserve existing metadata
       setStags(newStags.map(stag => ({
         ...stag,
-        discordId: stagData[stag.tokenId]?.discordId,
-        email: stagData[stag.tokenId]?.email,
-        utcOffset: stagData[stag.tokenId]?.utcOffset,
+        ...stagData[stag.tokenId],
       })));
     } catch (error) {
       console.error('Failed to fetch stags:', error);
@@ -199,7 +197,7 @@ export default function Home() {
         alert('Stag minted successfully!');
         fetchStagStatuses();
       },
-      onError: (error) => alert(`Minting failed: ${error.message}`),
+      onError: (error: Error) => alert(`Minting failed: ${error.message}`),
     });
   };
 
@@ -236,9 +234,14 @@ export default function Home() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ stagId, ownerAddress: address, timezone: utcOffset, discordId, email }),
         });
+        // Update stagData with the latest values
+        setStagData(prev => ({
+          ...prev,
+          [stagId]: { discordId, email, utcOffset }
+        }));
         fetchStagStatuses();
       },
-      onError: (error) => alert(`Failed to start novena: ${error.message}`),
+      onError: (error: Error) => alert(`Failed to start novena: ${error.message}`),
     });
   };
 
@@ -261,7 +264,7 @@ export default function Home() {
         alert('Novena completed successfully!');
         fetchStagStatuses();
       },
-      onError: (error) => alert(`Failed to complete novena: ${error.message}`),
+      onError: (error: Error) => alert(`Failed to complete novena: ${error.message}`),
     });
   };
 
@@ -287,7 +290,7 @@ export default function Home() {
         setBatchSuccesses('');
         fetchStagStatuses();
       },
-      onError: (error) => alert(`Batch completion failed: ${error.message}`),
+      onError: (error: Error) => alert(`Batch completion failed: ${error.message}`),
     });
   };
 
