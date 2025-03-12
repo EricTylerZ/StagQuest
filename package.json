@@ -33,6 +33,7 @@
     "@vercel/blob": "^0.27.2",
     "@wagmi/connectors": "^5.7.9",
     "discord.js": "^14.18.0",
+    "ethers": "^6.13.5",
     "next": "^15.2.2",
     "pg": "^8.14.0",
     "vercel": "^41.4.0",
@@ -40,6 +41,7 @@
     "wagmi": "^2.14.13"
   },
   "devDependencies": {
+    "@types/ms": "^2.1.0",
     "@types/node": "^22.13.10",
     "typescript": "^5.8.2"
   }
