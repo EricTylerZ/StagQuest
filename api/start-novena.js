@@ -18,10 +18,15 @@ module.exports = async (req, res) => {
     timezone
   };
 
-  await put(`novenas/${stagId}.json`, JSON.stringify(novena), { access: 'public' });
+  try {
+    await put(`novenas/${stagId}.json`, JSON.stringify(novena), { access: 'public' });
 
-  const mapping = { stagIds: [Number(stagId)], timezone, email: email || '' };
-  await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { access: 'public' });
+    const mapping = { stagIds: [Number(stagId)], timezone, email: email || '' };
+    await put(`discord_mappings/${discordId}.json`, JSON.stringify(mapping), { access: 'public' });
 
-  res.status(200).json({ message: 'Novena started' });
+    res.status(200).json({ message: 'Novena started' });
+  } catch (error) {
+    console.error('Error starting novena:', error);
+    res.status(500).json({ error: 'Failed to start novena' });
+  }
 };
