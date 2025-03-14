@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>StagQuest</title>
+    <script src="https://unpkg.com/web3@1.6.0/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>StagQuest</h1>
+    <button onclick="mintStag()">Mint Stag</button>
+    <script>
+        async function mintStag() {
+            const web3 = new Web3(window.ethereum);
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            const accounts = await web3.eth.getAccounts();
+            const contract = new web3.eth.Contract(ABI, "YOUR_CONTRACT_ADDRESS");
+            const tx = await contract.methods.mintStag().send({
+                from: accounts[0],
+                value: web3.utils.toWei("0.0001", "ether")
+            });
+            const signedTx = tx.rawTransaction;
+            fetch("/api/mint", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ signedTx })
+            })
+            .then(response => response.json())
+            .then(data => console.log("Minted:", data))
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
+</body>
+</html>
