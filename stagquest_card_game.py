@@ -28,7 +28,7 @@ PAGE_WIDTH, PAGE_HEIGHT = letter
 royal_turquoise = Color(0, 0.569, 0.545)
 FUN_FACT_HEIGHT = 0.6 * inch
 
-# Virtue Deck (22 cards) with accurate Divine Office timings
+# Virtue Deck (22 cards)
 virtue_cards = [
     ("Lauds Prayer", "40M are trafficked—addiction fuels this. Pray to break free today.\n*Fun Fact:* Lauds (dawn) praises the new day."),
     ("Prime Resolve", "Porn’s a $150B industry exploiting kids. Commit to purity now.\n*Fun Fact:* Prime (early morning) starts the day’s work."),
@@ -56,6 +56,7 @@ virtue_cards = [
 
 # Helper Functions
 def wrap_text(text, width, font, font_size, c, centered=False):
+    """Wrap text to fit within a specified width, optionally centering it."""
     c.setFont(font, font_size)
     words = text.split()
     lines = []
@@ -77,6 +78,7 @@ def wrap_text(text, width, font, font_size, c, centered=False):
     return lines
 
 def create_qr_code(url):
+    """Generate a QR code image from a URL and save it to a temporary file."""
     qr = qrcode.QRCode(version=1, box_size=10, border=1)
     qr.add_data(url)
     qr.make(fit=True)
@@ -86,6 +88,7 @@ def create_qr_code(url):
     return temp_file.name
 
 def draw_qr_with_label_and_desc(c, url, label, description, x, y):
+    """Draw a QR code with a label above and description below, centered."""
     qr_file = create_qr_code(url)
     c.drawImage(qr_file, x, y, QR_SIZE, QR_SIZE)
     os.remove(qr_file)
@@ -97,22 +100,25 @@ def draw_qr_with_label_and_desc(c, url, label, description, x, y):
     c.setFillColor(royal_turquoise)
     wrapped_desc = wrap_text(description, QR_SIZE, FONT_NAME, 9, c, centered=True)
     desc_y = y - 0.1 * inch
-    for i, (line, line_width) in enumerate(wrapped_desc[:4]):
+    for i, (line, line_width) in enumerate(wrapped_desc[:4]):  # Limit to 4 lines to avoid overflow
         c.drawString(x + (QR_SIZE - line_width) / 2, desc_y - i * 10, line)
 
 def draw_card(c, x, y, title, text):
+    """Draw a single Virtue Card with title, main text, and optional fun fact."""
     parts = text.split("\n*Fun Fact:*", 1)
     main_text = parts[0].strip()
     fun_fact = "*Fun Fact:*" + parts[1].strip() if len(parts) > 1 else None
     
+    # Title
     c.setFont(FONT_NAME, 12)
     c.setFillColorRGB(0, 0, 0)
     title_width = c.stringWidth(title, FONT_NAME, 12)
     c.drawString(x + (CARD_WIDTH - title_width) / 2, y + CARD_HEIGHT - 20, title)
     
+    # Main text, centered
     c.setFont(FONT_NAME, 10)
     wrapped_main = wrap_text(main_text, CARD_WIDTH - 20, FONT_NAME, 10, c, centered=True)
-    m = min(4, len(wrapped_main))
+    m = min(4, len(wrapped_main))  # Limit to 4 lines
     total_main_height = m * 12
     main_text_top = y + CARD_HEIGHT - 30
     main_text_bottom = y + FUN_FACT_HEIGHT
@@ -122,72 +128,71 @@ def draw_card(c, x, y, title, text):
         line, line_width = wrapped_main[i]
         c.drawString(x + (CARD_WIDTH - line_width) / 2, start_y - i * 12, line)
     
+    # Fun fact, centered
     if fun_fact:
         c.setFont(FONT_NAME, 8)
         wrapped_fact = wrap_text(fun_fact, CARD_WIDTH - 20, FONT_NAME, 8, c, centered=True)
-        fact_lines = min(2, len(wrapped_fact))
+        fact_lines = min(2, len(wrapped_fact))  # Limit to 2 lines
         fact_top_y = y + FUN_FACT_HEIGHT
         for j in range(fact_lines):
             fact_line, fact_width = wrapped_fact[j]
             c.drawString(x + (CARD_WIDTH - fact_width) / 2, fact_top_y - 10 - j * 10, fact_line)
     
+    # Card border
     c.rect(x, y, CARD_WIDTH, CARD_HEIGHT)
 
-# Page Functions
+# Page Drawing Functions
 def draw_common_footer(c):
+    """Draw a simple footer with the website on every page."""
     c.setFont(FONT_NAME, 8)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, 0.3 * inch, "zoseco.com")
+    c.drawCentredString(PAGE_WIDTH / 2, 0.3 * inch, "zoseco.com")
 
-def draw_contact_footer(c, include_contribution=False):
+def draw_contact_footer(c):
+    """Draw the contact footer with phone, email, and Discord link."""
     c.setFont(FONT_NAME, 11)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, MARGIN + 0.8 * inch, "Fortify the Stronghold – Get in Touch!")
+    c.drawCentredString(PAGE_WIDTH / 2, MARGIN + 0.8 * inch, "Fortify the Stronghold – Get in Touch!")
     c.setFont(FONT_NAME, 9)
     c.setFillColorRGB(0, 0, 0)
-    c.drawCentredString(PAGE_WIDTH/2, MARGIN + 0.6 * inch, "Text/Voicemail: (219) 488-2689")
-    c.drawCentredString(PAGE_WIDTH/2, MARGIN + 0.4 * inch, "Email: info@zoseco.com")
-    c.drawCentredString(PAGE_WIDTH/2, MARGIN + 0.2 * inch, "Join our Discord: https://discord.com/invite/zZhtw9WVNv")
-    if include_contribution:
-        c.setFont(FONT_NAME, 11)
-        c.setFillColor(royal_turquoise)
-        c.drawCentredString(PAGE_WIDTH/2, MARGIN + 1.4 * inch, "Stronghold Quest Optional Contribution")
-        c.setFont(FONT_NAME, 9)
-        c.setFillColorRGB(0, 0, 0)
-        c.drawCentredString(PAGE_WIDTH/2, MARGIN + 1.2 * inch, "Keep building! Contribute 50¢, $500, or anything to")
-        c.drawCentredString(PAGE_WIDTH/2, MARGIN + 1.0 * inch, "Zoseco: A Stronghold for Pro-Life Victory.")
-        c.drawCentredString(PAGE_WIDTH/2, MARGIN + 0.8 * inch, "Not tax-deductible. https://pay.zaprite.com/pl_4LxYdtCRsZ")
+    c.drawCentredString(PAGE_WIDTH / 2, MARGIN + 0.6 * inch, "Text/Voicemail: (219) 488-2689")
+    c.drawCentredString(PAGE_WIDTH / 2, MARGIN + 0.4 * inch, "Email: info@zoseco.com")
+    c.drawCentredString(PAGE_WIDTH / 2, MARGIN + 0.2 * inch, "Join our Discord: https://discord.com/invite/zZhtw9WVNv")
 
 def draw_cover_page(c):
+    """Draw the cover page with title, version, and QR codes."""
     c.setFont(FONT_NAME, 20)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2, "StagQuest: A Card Game")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2, "Stag Quest: A Card Game")
     c.setFont(FONT_NAME, 12)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 30, "A Zoseco Journey to Virtue")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 30, "A Zoseco Journey to Virtue")
     c.setFont(FONT_NAME, 9)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 45, "Version 0.32")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 45, "Version 0.33")
     
+    # QR codes
     discord_x = MARGIN
     donation_x = PAGE_WIDTH - MARGIN - QR_SIZE
     qr_y = MARGIN + 1.6 * inch
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
-                                "Connect with the StagQuest community for support, updates, and to share your journey.",
+                                "Connect with the Stag Quest community for support and updates.",
                                 discord_x, qr_y)
     draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
-                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
+                                "Support Zoseco’s fight against addiction and trafficking.",
                                 donation_x, qr_y)
     
     draw_contact_footer(c)
     draw_common_footer(c)
 
 def draw_instructions_page(c):
+    """Draw the instructions page with centered, narrowed text."""
     c.setFont(FONT_NAME, 16)
     c.setFillColor(royal_turquoise)
-    c.drawString(MARGIN, PAGE_HEIGHT - MARGIN, "StagQuest: How to Play")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, "Stag Quest: How to Play")
+    
     c.setFont(FONT_NAME, 11)
     c.setFillColorRGB(0, 0, 0)
     instructions = [
-        "StagQuest is a 9-day solo or small-group card game to build virtue and resist addiction, inspired by a novena. Grow your Stag’s Family Strength with the Virtue Deck (daily draws).",
+        "Stag Quest is a 9-day solo or small-group card game to build virtue and resist addiction, inspired by a novena. Grow your Stag’s Family Strength with the Virtue Deck (daily draws).",
         "How to Play:",
         "1. Setup: Print and cut out the Virtue Deck (22 cards) and Stag Pouch sheet.",
         "2. Start: Shuffle the Virtue Deck. Set your Stag Pouch with two slots: Virtue and Temptation.",
@@ -197,27 +202,30 @@ def draw_instructions_page(c):
         "Tips: Personalize your Stag Pouch or cards with drawings (e.g., antlers). Join our Discord or support the cause via the QR codes!"
     ]
     y_pos = PAGE_HEIGHT - MARGIN - 20
+    text_width = PAGE_WIDTH - 3 * MARGIN  # Narrower text block for better readability
     for line in instructions:
-        wrapped_lines = wrap_text(line, PAGE_WIDTH - 2 * MARGIN, FONT_NAME, 11, c)
-        for wrapped_line in wrapped_lines:
-            c.drawString(MARGIN, y_pos, wrapped_line)
+        wrapped_lines = wrap_text(line, text_width, FONT_NAME, 11, c, centered=True)
+        for wrapped_line, line_width in wrapped_lines:
+            c.drawCentredString(PAGE_WIDTH / 2, y_pos, wrapped_line)
             y_pos -= 15
-        y_pos -= 5
+        y_pos -= 5  # Extra spacing between paragraphs
     
+    # QR codes
     discord_x = MARGIN
     donation_x = PAGE_WIDTH - MARGIN - QR_SIZE
     qr_y = MARGIN + 1.6 * inch
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
-                                "Connect with the StagQuest community for support, updates, and to share your journey.",
+                                "Connect with the Stag Quest community for support and updates.",
                                 discord_x, qr_y)
     draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
-                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
+                                "Support Zoseco’s fight against addiction and trafficking.",
                                 donation_x, qr_y)
     
     draw_contact_footer(c)
     draw_common_footer(c)
 
 def draw_virtue_cards_pages(c):
+    """Draw the Virtue Deck cards across multiple pages."""
     total_card_width = 2 * CARD_WIDTH + 20
     start_x = (PAGE_WIDTH - total_card_width) / 2
     for i, (title, text) in enumerate(virtue_cards):
@@ -233,27 +241,30 @@ def draw_virtue_cards_pages(c):
     draw_common_footer(c)
 
 def draw_pouch_page(c):
+    """Draw the pouch page with Virtue/Temptation pouches and badge."""
     c.setFont(FONT_NAME, 12)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - MARGIN, "Stag Pouch")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, "Stag Pouch")
     
     c.setFont(FONT_NAME, 11)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - MARGIN - 20, "Mending your life begins with intention")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN - 20, "Mending your life begins with intention")
+    
     c.setFont(FONT_NAME, 10)
     c.setFillColorRGB(0, 0, 0)
     instructions = [
         "Crafting a pouch—whether by stitching cloth, folding paper, or simply drawing—mirrors the small, deliberate acts that rebuild your spirit.",
         "Create Virtue and Temptation pouches to hold your daily cards, or design your own tracker to mark your path. Each step is a stitch toward wholeness.",
-        "Cut out the pouch shapes below. Attach them here with stitches, glue, or tape, leaving the top open for cards. Or craft your own from fabric or paper—make it yours."
+        "Cut out the pouch shapes below. Attach them with stitches, glue, or tape, leaving the top open for cards. Or craft your own from fabric or paper—make it yours."
     ]
     y_pos = PAGE_HEIGHT - MARGIN - 40
     for line in instructions:
         wrapped_lines = wrap_text(line, PAGE_WIDTH - 2 * MARGIN, FONT_NAME, 10, c)
         for wrapped_line in wrapped_lines:
-            c.drawCentredString(PAGE_WIDTH/2, y_pos, wrapped_line)
+            c.drawCentredString(PAGE_WIDTH / 2, y_pos, wrapped_line)
             y_pos -= 12
     
+    # Draw pouches
     pouch_y = y_pos - 20
     total_pouch_width = 2 * POUCH_WIDTH + POUCH_SPACING
     start_x = (PAGE_WIDTH - total_pouch_width) / 2
@@ -270,34 +281,34 @@ def draw_pouch_page(c):
         label_width = c.stringWidth(label, FONT_NAME, 10)
         c.drawString(x + (POUCH_WIDTH - label_width) / 2, y + POUCH_HEIGHT + 5, label)
     
-    c.setFont(FONT_NAME, 8)
-    c.drawCentredString(PAGE_WIDTH/2, pouch_y - POUCH_HEIGHT - 10, "Attach pouches here ↓")
-    
+    # Virtuous Stag Badge
     badge_width, badge_height = 3.5 * inch, 1.5 * inch
     badge_y = pouch_y - POUCH_HEIGHT - 20 - badge_height
     c.rect((PAGE_WIDTH - badge_width) / 2, badge_y, badge_width, badge_height)
     c.setFont(FONT_NAME, 14)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, badge_y + badge_height - 0.4 * inch, "Virtuous Stag Badge")
+    c.drawCentredString(PAGE_WIDTH / 2, badge_y + badge_height - 0.4 * inch, "Virtuous Stag Badge")
     c.setFont(FONT_NAME, 10)
     c.setFillColorRGB(0, 0, 0)
-    c.drawCentredString(PAGE_WIDTH/2, badge_y + badge_height - 0.7 * inch, "Awarded to: ________________")
-    c.drawCentredString(PAGE_WIDTH/2, badge_y + badge_height - 1.0 * inch, "Family Strength Gained!")
+    c.drawCentredString(PAGE_WIDTH / 2, badge_y + badge_height - 0.7 * inch, "Awarded to: ________________")
+    c.drawCentredString(PAGE_WIDTH / 2, badge_y + badge_height - 1.0 * inch, "Family Strength Gained!")
     
+    # QR codes
     discord_x = MARGIN
     donation_x = PAGE_WIDTH - MARGIN - QR_SIZE
     qr_y = MARGIN + 1.6 * inch
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
-                                "Connect with the StagQuest community for support, updates, and to share your journey.",
+                                "Connect with the Stag Quest community for support and updates.",
                                 discord_x, qr_y)
     draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
-                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
+                                "Support Zoseco’s fight against addiction and trafficking.",
                                 donation_x, qr_y)
     
-    draw_contact_footer(c, include_contribution=True)
+    draw_contact_footer(c)
     draw_common_footer(c)
 
 def create_pdf():
+    """Generate the full Stag Quest PDF."""
     c = canvas.Canvas("stagquest_card_game.pdf", pagesize=letter)
     draw_cover_page(c)
     c.showPage()
