@@ -30,3 +30,6 @@ package.json
 
 # Next.js build output
 .next/
+
+instance/
+stagquest_env/
