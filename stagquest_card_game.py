@@ -17,32 +17,32 @@ except Exception as e:
     print(f"Failed to register Century Schoolbook: {e}. Falling back to Helvetica.")
     FONT_NAME = "Helvetica"
 
-# Card dimensions (2.5" x 3.5")
+# Card dimensions (2.5" x 3.5", standard poker size)
 CARD_WIDTH, CARD_HEIGHT = 2.5 * inch, 3.5 * inch
 PAGE_WIDTH, PAGE_HEIGHT = letter
 
-# Define Stag Green (#2E8B57)
-stag_green = Color(0.18, 0.545, 0.341)
+# Define Royal Turquoise (#00918b)
+royal_turquoise = Color(0, 0.569, 0.545)
 
-# Virtue Deck (18 cards, prayer-time names, some with fun facts)
+# Virtue Deck (18 cards, prayer-time names)
 virtue_cards = [
     ("Lauds Prayer", "40M are trafficked—addiction fuels this. Pray to break free today."),
     ("Prime Resolve", "Porn’s a $150B industry exploiting kids. Commit to purity now."),
-    ("Terce Strength", "Temptation rewires your brain—fight it to reclaim your mind.\n*Fun Fact:* Terce is the 9am prayer, marking Christ’s trial."),
+    ("Terce Strength", "Temptation rewires your brain—fight it to reclaim your mind."),
     ("Sext Reflection", "76% of trafficking victims are under 18. Reflect on who you protect."),
     ("None Cut", "Porn’s progressive—each view deepens the trap. Pray to sever it."),
     ("Vespers Stand", "9,000 illicit parlors thrive on demand. Stand against it today."),
     ("Compline Rest", "Addiction funds evil—every ‘no’ saves lives. Rest in this victory."),
     ("Lauds Hope", "A child sold every 2 min—your virtue restores hope. Plan one good deed."),
-    ("Prime Focus", "Dopamine spikes blind you—resist to heal your soul.\n*Fun Fact:* Prime (6am) starts the daily office, a call to purpose."),
+    ("Prime Focus", "Dopamine spikes blind you—resist to heal your soul."),
     ("Terce Shield", "2.5M trafficked yearly—your fight shields them. Pray for strength."),
     ("Sext Vision", "Your eyes choose life or death—guard them to lead your family."),
     ("None Break", "Porn drives 42% of family trafficking. Break the cycle now."),
-    ("Vespers Renewal", "Habits form in weeks—renew your will to defy lust’s pull.\n*Fun Fact:* Vespers (evening) reflects on the day’s work."),
+    ("Vespers Renewal", "Habits form in weeks—renew your will to defy lust’s pull."),
     ("Compline Peace", "Each clean day cuts traffickers’ cash. Note your progress."),
     ("Lauds Rally", "14M new victims annually—rally your spirit to end this."),
     ("Prime Triumph", "Virtue builds a shield—help another resist temptation today."),
-    ("Terce Legacy", "Onchain or off, your quest frees souls. Pray for vigilance.\n*Fun Fact:* Novenas are 9-day prayers, echoing the Apostles’ wait."),
+    ("Terce Legacy", "Onchain or off, your quest frees souls. Pray for vigilance."),
     ("Sext Growth", "Your stag grows horns—celebrate each win with family purpose.")
 ]
 
@@ -53,6 +53,13 @@ temptation_cards = [
     ("Temptation", "Fatigue clouds your will—rest well or lose a day."),
     ("Temptation", "Old habits whisper—replace them or lose a day."),
     ("Temptation", "A lie justifies relapse—reject it or lose a day.")
+]
+
+# Fun Facts for Virtue Card pages
+fun_facts = [
+    "Fun Fact: Terce (9am) marks Christ’s trial in the Divine Office.",
+    "Fun Fact: Prime (6am) starts the daily office, a call to purpose.",
+    "Fun Fact: Novenas are 9-day prayers, echoing the Apostles’ wait."
 ]
 
 def wrap_text(text, width, font, font_size, c):
@@ -78,10 +85,10 @@ def draw_card(c, x, y, title, text):
     c.setFont(FONT_NAME, 12)
     c.setFillColorRGB(0, 0, 0)
     c.drawString(x + 10, y + CARD_HEIGHT - 20, title)
-    c.setFont(FONT_NAME, 9)  # Smaller font to fit fun facts
-    wrapped_lines = wrap_text(text, CARD_WIDTH - 20, FONT_NAME, 9, c)
-    for i, line in enumerate(wrapped_lines[:5]):  # Increased to 5 lines for fun facts
-        c.drawString(x + 10, y + CARD_HEIGHT - 40 - i * 11, line)
+    c.setFont(FONT_NAME, 10)  # Increased from 9 to 10
+    wrapped_lines = wrap_text(text, CARD_WIDTH - 20, FONT_NAME, 10, c)
+    for i, line in enumerate(wrapped_lines[:4]):  # 4 lines max to fit
+        c.drawString(x + 10, y + CARD_HEIGHT - 40 - i * 12, line)
     c.rect(x, y, CARD_WIDTH, CARD_HEIGHT)
 
 def create_qr_code(url):
@@ -99,7 +106,7 @@ def create_pdf():
 
     # Page 1: Cover
     c.setFont(FONT_NAME, 20)
-    c.setFillColor(stag_green)
+    c.setFillColor(royal_turquoise)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2, "StagQuest: A Card Game")
     c.setFont(FONT_NAME, 12)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 30, "A Zoseco Journey to Virtue")
@@ -124,7 +131,7 @@ def create_pdf():
 
     # Page 2: Instructions
     c.setFont(FONT_NAME, 16)
-    c.setFillColor(stag_green)
+    c.setFillColor(royal_turquoise)
     c.drawString(1 * inch, PAGE_HEIGHT - 1 * inch, "StagQuest: How to Play")
     c.setFont(FONT_NAME, 11)
     c.setFillColorRGB(0, 0, 0)
@@ -155,31 +162,37 @@ def create_pdf():
         x = (i % 2) * (CARD_WIDTH + 20) + 1.75 * inch
         y = PAGE_HEIGHT - (((i % 4) // 2) + 1) * (CARD_HEIGHT + 20) - 1 * inch
         draw_card(c, x, y, title, text)
+        # Add fun facts to bottom of Virtue pages
+        if i == 3 or i == 7 or i == 11:  # After 4th card on each page
+            c.setFont(FONT_NAME, 9)
+            c.setFillColorRGB(0, 0, 0)
+            fact_index = (i // 4) % len(fun_facts)
+            c.drawCentredString(PAGE_WIDTH/2, 0.5 * inch, fun_facts[fact_index])
     c.showPage()
 
-    # Page 6: Temptation Deck (5 cards, custom layout)
+    # Page 6: Temptation Deck (5 cards, adjusted layout)
     for i, (title, text) in enumerate(temptation_cards):
         if i == 0:
             x = 1.75 * inch
-            y = PAGE_HEIGHT - 1 * inch - CARD_HEIGHT
+            y = PAGE_HEIGHT - 1.5 * inch - CARD_HEIGHT  # Increased top margin
         elif i == 1:
             x = 1.75 * inch + CARD_WIDTH + 20
-            y = PAGE_HEIGHT - 1 * inch - CARD_HEIGHT
+            y = PAGE_HEIGHT - 1.5 * inch - CARD_HEIGHT
         elif i == 2:
             x = 1.75 * inch
-            y = PAGE_HEIGHT - 2 * inch - 2 * CARD_HEIGHT
+            y = PAGE_HEIGHT - 2.5 * inch - 2 * CARD_HEIGHT
         elif i == 3:
             x = 1.75 * inch + CARD_WIDTH + 20
-            y = PAGE_HEIGHT - 2 * inch - 2 * CARD_HEIGHT
+            y = PAGE_HEIGHT - 2.5 * inch - 2 * CARD_HEIGHT
         elif i == 4:
             x = (PAGE_WIDTH - CARD_WIDTH) / 2
-            y = PAGE_HEIGHT - 3 * inch - 3 * CARD_HEIGHT
+            y = PAGE_HEIGHT - 3.5 * inch - 3 * CARD_HEIGHT  # Adjusted to fit
         draw_card(c, x, y, title, text)
     c.showPage()
 
     # Page 7: Stag Tracker and Badge
     c.setFont(FONT_NAME, 12)
-    c.setFillColor(stag_green)
+    c.setFillColor(royal_turquoise)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 1 * inch, "Stag Tracker")
     c.setFont(FONT_NAME, 10)
     c.setFillColorRGB(0, 0, 0)
@@ -194,7 +207,7 @@ def create_pdf():
     badge_x, badge_y = (PAGE_WIDTH - badge_width) / 2, 6 * inch
     c.rect(badge_x, badge_y, badge_width, badge_height)
     c.setFont(FONT_NAME, 14)
-    c.setFillColor(stag_green)
+    c.setFillColor(royal_turquoise)
     c.drawCentredString(PAGE_WIDTH/2, badge_y + badge_height - 0.4 * inch, "Virtuous Stag Badge")
     c.setFont(FONT_NAME, 10)
     c.setFillColorRGB(0, 0, 0)
@@ -202,7 +215,7 @@ def create_pdf():
     c.drawCentredString(PAGE_WIDTH/2, badge_y + badge_height - 1.0 * inch, "Family Strength Gained!")
 
     c.setFont(FONT_NAME, 11)
-    c.setFillColor(stag_green)
+    c.setFillColor(royal_turquoise)
     c.drawCentredString(PAGE_WIDTH/2, 1.8 * inch, "Join the Quest – Get in Touch!")
     c.setFont(FONT_NAME, 9)
     c.setFillColorRGB(0, 0, 0)
