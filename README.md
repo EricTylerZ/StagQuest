@@ -1,30 +1,29 @@
-# StagQuest
+# StagQuest: Fight Human Trafficking, One Choice at a Time
 
-StagQuest is a Web3 battleground to fight human trafficking—one choice at a time. Mint a Stag NFT on Base Sepolia, stake ETH, and commit to a 9-day novena of purity. Every day you resist porn, you strike at the $150B trafficking industry’s demand. Your Stag grows stronger, and your victories fund freedom.
+**StagQuest** is a 9-day card game that turns your personal discipline into a strike against human trafficking. Resist temptation, grow in virtue, and weaken the $150B trafficking industry’s grip—one choice at a time.
 
 ## Why It Exists
-40 million are trafficked—42% by family, 76% under 18. Porn drives this evil. StagQuest turns personal discipline into collective liberation, tracked onchain.
+40 million are trafficked—42% by family, 76% under 18. Porn fuels this evil. StagQuest makes your daily wins count.
 
-## How It Works
-- **Mint a Stag**: Pay ≥0.0001 ETH to join the fight.
-- **Start a Novena**: Pledge ETH (optional) and resist temptation for 9 days.
-- **Track Progress**: Owners complete novenas based on your daily wins.
-- **See Impact**: Each clean day weakens exploitation—your Stag’s family grows for each novena without porn.
+## Features
+- **Virtue Deck**: 22 cards with daily challenges—pray, reflect, act.
+- **Stag Pouch**: Track wins (Virtue) and losses (Temptation).
+- **Printable PDF**: Download and play now.
+- **Web3 in Progress**: Mint Stags and stake ETH (coming soon).
 
-## Setup
-1. **Clone**: `git clone https://github.com/EricTylerZ/StagQuest.git`
-2. **Install**: `npm install`
-3. **Run**: `npm run dev`
-4. **Deploy**: `vercel --prod`
+## How to Play
+1. Get the [StagQuest PDF](https://zoseco.com/wp-content/uploads/2025/03/stagquest_card_game.pdf) (link soon).
+2. Print and cut the Virtue Deck and add a pouch.
+3. Draw a card daily for 9 days—win or lose, track it.
+4. Finish with 9 Virtue cards successful,  Claim your badge.
 
-## Usage
-- Connect MetaMask (Base Sepolia, chain ID 84532).
-- Mint, start novenas, or (as owner) manage completions.
+## Get Involved
+- **Discord**: Join us—[zoseco.com/discord](https://discord.com/invite/zZhtw9WVNv).
+- **Contribute**: Help build the Web3 future—fork and PR.
 
-## Next Steps
-- Daily novena prompts (7x/day) via Discord with response tracking.
-- Base mainnet deployment for real-world impact.
+## License
+I don't know what I'm doing here.
 
-## History
-- `v0.01-python`: Python backend (tagged).
-- `v0.02-typescript`: TypeScript/Next.js frontend (tagged).
+---
+
+**Version 0.33** | *Zoseco: A Stronghold for Life*
