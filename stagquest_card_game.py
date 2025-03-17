@@ -8,13 +8,9 @@ import qrcode
 import os
 import tempfile
 
-# Register Century Schoolbook fonts from C:\Windows\Fonts
+# Register Century Schoolbook font
 try:
-    pdfmetrics.registerFont(TTFont("CenturySchoolbook", "C:/Windows/Fonts/CENSCBK.TTF"))  # Regular
-    # Optional: Register variants if you want bold/italic support later
-    # pdfmetrics.registerFont(TTFont("CenturySchoolbook-Bold", "C:/Windows/Fonts/CENSCBKB.TTF"))  # Bold (adjust filename if different)
-    # pdfmetrics.registerFont(TTFont("CenturySchoolbook-Italic", "C:/Windows/Fonts/CENSCBKI.TTF"))  # Italic (adjust filename)
-    # pdfmetrics.registerFont(TTFont("CenturySchoolbook-BoldItalic", "C:/Windows/Fonts/CENSCBKBI.TTF"))  # Bold Italic (adjust filename)
+    pdfmetrics.registerFont(TTFont("CenturySchoolbook", "C:/Windows/Fonts/CENSCBK.TTF"))
     FONT_NAME = "CenturySchoolbook"
     print("Century Schoolbook font registered successfully.")
 except Exception as e:
@@ -25,30 +21,38 @@ except Exception as e:
 CARD_WIDTH, CARD_HEIGHT = 2.5 * inch, 3.5 * inch
 PAGE_WIDTH, PAGE_HEIGHT = letter
 
-# Define Stag Green (#2E8B57, a forest-inspired color)
+# Define Stag Green (#2E8B57)
 stag_green = Color(0.18, 0.545, 0.341)
 
-# Card content (derived from your novena prompts and new temptations)
+# Virtue Deck (18 cards, prayer-time names, some with fun facts)
 virtue_cards = [
-    ("Day 1 Lauds", "40M trafficking victims - pray to start your fight today!"),
-    ("Day 1 Sext", "Porn drives demand - commit to saying no now."),
-    ("Day 1 Compline", "Rest in victory. Were you porn-free today? Y/N"),
-    ("Day 2 Prime", "Purity is power - stay strong this morning."),
-    ("Day 2 None", "Every 'no' weakens exploitation - reflect on this."),
-    ("Day 3 Terce", "Porn’s progressive - pray to cut it off today."),
-    ("Day 4 Sext", "Addiction funds evil - starve it with your choice."),
-    ("Day 5 Prime", "Neural pathways rewiring - affirm your progress."),
-    ("Day 6 Sext", "Your eyes hold power - choose life over death."),
-    ("Day 7 Terce", "Brain chemistry normalizing - note one change."),
-    ("Day 8 Sext", "Community shield strengthening - help another today."),
-    ("Day 9 Vespers", "Celebrate then sharpen your sword for tomorrow.")
+    ("Lauds Prayer", "40M are trafficked—addiction fuels this. Pray to break free today."),
+    ("Prime Resolve", "Porn’s a $150B industry exploiting kids. Commit to purity now."),
+    ("Terce Strength", "Temptation rewires your brain—fight it to reclaim your mind.\n*Fun Fact:* Terce is the 9am prayer, marking Christ’s trial."),
+    ("Sext Reflection", "76% of trafficking victims are under 18. Reflect on who you protect."),
+    ("None Cut", "Porn’s progressive—each view deepens the trap. Pray to sever it."),
+    ("Vespers Stand", "9,000 illicit parlors thrive on demand. Stand against it today."),
+    ("Compline Rest", "Addiction funds evil—every ‘no’ saves lives. Rest in this victory."),
+    ("Lauds Hope", "A child sold every 2 min—your virtue restores hope. Plan one good deed."),
+    ("Prime Focus", "Dopamine spikes blind you—resist to heal your soul.\n*Fun Fact:* Prime (6am) starts the daily office, a call to purpose."),
+    ("Terce Shield", "2.5M trafficked yearly—your fight shields them. Pray for strength."),
+    ("Sext Vision", "Your eyes choose life or death—guard them to lead your family."),
+    ("None Break", "Porn drives 42% of family trafficking. Break the cycle now."),
+    ("Vespers Renewal", "Habits form in weeks—renew your will to defy lust’s pull.\n*Fun Fact:* Vespers (evening) reflects on the day’s work."),
+    ("Compline Peace", "Each clean day cuts traffickers’ cash. Note your progress."),
+    ("Lauds Rally", "14M new victims annually—rally your spirit to end this."),
+    ("Prime Triumph", "Virtue builds a shield—help another resist temptation today."),
+    ("Terce Legacy", "Onchain or off, your quest frees souls. Pray for vigilance.\n*Fun Fact:* Novenas are 9-day prayers, echoing the Apostles’ wait."),
+    ("Sext Growth", "Your stag grows horns—celebrate each win with family purpose.")
 ]
+
+# Temptation Deck (5 cards)
 temptation_cards = [
-    ("Temptation", "An urge strikes. Resist it or lose a day’s progress."),
-    ("Temptation", "A friend shares illicit content. Say no or lose a day."),
-    ("Temptation", "Fatigue weakens your will. Rest well or lose a day."),
-    ("Temptation", "Old habits call. Replace them or lose a day."),
-    ("Temptation", "A lie justifies relapse. Reject it or lose a day.")
+    ("Temptation", "An urge strikes—resist it or lose a day’s progress."),
+    ("Temptation", "Illicit content tempts you—say no or lose a day."),
+    ("Temptation", "Fatigue clouds your will—rest well or lose a day."),
+    ("Temptation", "Old habits whisper—replace them or lose a day."),
+    ("Temptation", "A lie justifies relapse—reject it or lose a day.")
 ]
 
 def wrap_text(text, width, font, font_size, c):
@@ -74,10 +78,10 @@ def draw_card(c, x, y, title, text):
     c.setFont(FONT_NAME, 12)
     c.setFillColorRGB(0, 0, 0)
     c.drawString(x + 10, y + CARD_HEIGHT - 20, title)
-    c.setFont(FONT_NAME, 10)
-    wrapped_lines = wrap_text(text, CARD_WIDTH - 20, FONT_NAME, 10, c)
-    for i, line in enumerate(wrapped_lines[:4]):
-        c.drawString(x + 10, y + CARD_HEIGHT - 40 - i * 12, line)
+    c.setFont(FONT_NAME, 9)  # Smaller font to fit fun facts
+    wrapped_lines = wrap_text(text, CARD_WIDTH - 20, FONT_NAME, 9, c)
+    for i, line in enumerate(wrapped_lines[:5]):  # Increased to 5 lines for fun facts
+        c.drawString(x + 10, y + CARD_HEIGHT - 40 - i * 11, line)
     c.rect(x, y, CARD_WIDTH, CARD_HEIGHT)
 
 def create_qr_code(url):
@@ -125,14 +129,15 @@ def create_pdf():
     c.setFont(FONT_NAME, 11)
     c.setFillColorRGB(0, 0, 0)
     instructions = [
-        "StagQuest is a solo or small-group card game to build virtue and resist temptation over 9 days. Inspired by a novena, you’ll grow your Stag’s Family Strength by completing daily Virtue Cards and overcoming Temptation Cards. Perfect for adults seeking to break free from pornography and become family leaders.",
+        "StagQuest is a 9-day solo or small-group card game to build virtue and resist addiction, inspired by a novena. Grow your Stag’s Family Strength with two decks: Virtue (daily draws) and Temptation (challenges on days 3, 6, 9).",
         "How to Play:",
-        "1. Setup: Print this PDF, cut out the Virtue Cards, Temptation Cards, and Stag Tracker.",
-        "2. Start: Shuffle the Virtue and Temptation decks. Set your Stag Tracker to Family Strength 0.",
-        "3. Daily Draw: Each 'day' (turn), draw a Virtue Card and complete its task (pray, reflect, act).",
-        "4. Temptation Test: Every 3rd day (turns 3, 6, 9), draw a Temptation Card. Resist it (say 'Y') or lose a day’s progress (say 'N').",
-        "5. Track Progress: Mark successful days on your Stag Tracker. Personalize it with drawings (e.g., antlers).",
-        "6. Win: After 9 days, if you have 9 successful days, increase Family Strength by 1 and claim your Virtuous Stag badge!"
+        "1. Setup: Print and cut out the Virtue Deck (18 cards), Temptation Deck (5 cards), and Stag Tracker.",
+        "2. Start: Shuffle both decks separately. Set your Stag Tracker to Family Strength 0.",
+        "3. Daily Draw: Each day, draw 2 Virtue Cards from the Virtue Deck. Complete their tasks (pray, reflect, act).",
+        "4. Temptation Test: On days 3, 6, and 9, draw 1 Temptation Card. Resist it (say 'Y') or lose a day’s progress (say 'N').",
+        "5. Track Your Novena: On the Stag Tracker, mark a check for each day you complete both Virtue tasks and resist Temptation (if drawn). One 'N' means no check for that day.",
+        "6. Win: After 9 days, if you have 9 checks, increase Family Strength by 1 and claim your Virtuous Stag badge!",
+        "Tips: Personalize your Stag Tracker with drawings (e.g., antlers). Suggest new cards on our Discord—share addiction facts or virtue ideas!"
     ]
     y_pos = PAGE_HEIGHT - 1.5 * inch
     for line in instructions:
@@ -143,24 +148,36 @@ def create_pdf():
         y_pos -= 5
     c.showPage()
 
-    # Page 3-4: Virtue Cards
+    # Pages 3-5: Virtue Deck (18 cards, 4 per page, 2 extra on last)
     for i, (title, text) in enumerate(virtue_cards):
-        page = 2 + (i // 4)
         if i % 4 == 0 and i > 0:
             c.showPage()
         x = (i % 2) * (CARD_WIDTH + 20) + 1.75 * inch
-        y = PAGE_HEIGHT - ((i % 4 // 2) + 1) * (CARD_HEIGHT + 20) - 1 * inch
+        y = PAGE_HEIGHT - (((i % 4) // 2) + 1) * (CARD_HEIGHT + 20) - 1 * inch
         draw_card(c, x, y, title, text)
     c.showPage()
 
-    # Page 5: Temptation Cards
-    for i, (type, text) in enumerate(temptation_cards):
-        x = (i % 2) * (CARD_WIDTH + 20) + 1.75 * inch
-        y = PAGE_HEIGHT - ((i % 4 // 2) + 1) * (CARD_HEIGHT + 20) - 1 * inch
-        draw_card(c, x, y, type, text)
+    # Page 6: Temptation Deck (5 cards, custom layout)
+    for i, (title, text) in enumerate(temptation_cards):
+        if i == 0:
+            x = 1.75 * inch
+            y = PAGE_HEIGHT - 1 * inch - CARD_HEIGHT
+        elif i == 1:
+            x = 1.75 * inch + CARD_WIDTH + 20
+            y = PAGE_HEIGHT - 1 * inch - CARD_HEIGHT
+        elif i == 2:
+            x = 1.75 * inch
+            y = PAGE_HEIGHT - 2 * inch - 2 * CARD_HEIGHT
+        elif i == 3:
+            x = 1.75 * inch + CARD_WIDTH + 20
+            y = PAGE_HEIGHT - 2 * inch - 2 * CARD_HEIGHT
+        elif i == 4:
+            x = (PAGE_WIDTH - CARD_WIDTH) / 2
+            y = PAGE_HEIGHT - 3 * inch - 3 * CARD_HEIGHT
+        draw_card(c, x, y, title, text)
     c.showPage()
 
-    # Page 6: Stag Tracker and Badge
+    # Page 7: Stag Tracker and Badge
     c.setFont(FONT_NAME, 12)
     c.setFillColor(stag_green)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 1 * inch, "Stag Tracker")
@@ -171,6 +188,7 @@ def create_pdf():
     c.setFont(FONT_NAME, 9)
     for i in range(9):
         c.drawString(2.1 * inch + (i * 0.45 * inch), PAGE_HEIGHT - 1.8 * inch, f"Day {i+1}: ___")
+    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 2.3 * inch, "Family Strength: ___")
 
     badge_width, badge_height = 3.5 * inch, 1.5 * inch
     badge_x, badge_y = (PAGE_WIDTH - badge_width) / 2, 6 * inch
