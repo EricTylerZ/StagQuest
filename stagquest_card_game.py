@@ -28,14 +28,14 @@ PAGE_WIDTH, PAGE_HEIGHT = letter
 royal_turquoise = Color(0, 0.569, 0.545)
 FUN_FACT_HEIGHT = 0.6 * inch
 
-# Virtue Deck (22 cards)
+# Virtue Deck (22 cards) with accurate Divine Office timings
 virtue_cards = [
     ("Lauds Prayer", "40M are trafficked—addiction fuels this. Pray to break free today.\n*Fun Fact:* Lauds (dawn) praises the new day."),
-    ("Prime Resolve", "Porn’s a $150B industry exploiting kids. Commit to purity now.\n*Fun Fact:* Prime (6am) starts the day’s work."),
-    ("Terce Strength", "Temptation rewires your brain—fight it to reclaim your mind.\n*Fun Fact:* Terce (9am) marks Christ’s trial."),
-    ("Sext Reflection", "76% of trafficking victims are under 18. Reflect on who you protect."),
-    ("None Cut", "Porn’s progressive—each view deepens the trap. Pray to sever it.\n*Fun Fact:* None (3pm) recalls Christ’s crucifixion."),
-    ("Vespers Stand", "9,000 illicit parlors thrive on demand. Stand against it today."),
+    ("Prime Resolve", "Porn’s a $150B industry exploiting kids. Commit to purity now.\n*Fun Fact:* Prime (early morning) starts the day’s work."),
+    ("Terce Strength", "Temptation rewires your brain—fight it to reclaim your mind.\n*Fun Fact:* Terce (mid-morning, 9am) marks Christ’s trial."),
+    ("Sext Reflection", "76% of trafficking victims are under 18. Reflect on who you protect.\n*Fun Fact:* Sext (noon) recalls Christ’s crucifixion."),
+    ("None Cut", "Porn’s progressive—each view deepens the trap. Pray to sever it.\n*Fun Fact:* None (mid-afternoon, 3pm) recalls Christ’s death."),
+    ("Vespers Stand", "9,000 illicit massage parlors thrive on demand, fueled by pornography spiraling into prostitution. Take a stand to end this exploitation.\n*Fun Fact:* Vespers (evening) reflects on the day."),
     ("Compline Rest", "Addiction funds evil—every ‘no’ saves lives. Rest in this victory.\n*Fun Fact:* Compline (night) seals the day in peace."),
     ("Lauds Hope", "A child sold every 2 min—your virtue restores hope. Plan one good deed."),
     ("Prime Focus", "Dopamine spikes blind you—resist to heal your soul."),
@@ -89,12 +89,10 @@ def draw_qr_with_label_and_desc(c, url, label, description, x, y):
     qr_file = create_qr_code(url)
     c.drawImage(qr_file, x, y, QR_SIZE, QR_SIZE)
     os.remove(qr_file)
-    # Label above QR in Royal Turquoise
     c.setFont(FONT_NAME, 14)
     c.setFillColor(royal_turquoise)
     label_width = c.stringWidth(label, FONT_NAME, 14)
     c.drawString(x + (QR_SIZE - label_width) / 2, y + QR_SIZE + 0.1 * inch, label)
-    # Description below QR in Royal Turquoise, 9pt, up to 4 lines
     c.setFont(FONT_NAME, 9)
     c.setFillColor(royal_turquoise)
     wrapped_desc = wrap_text(description, QR_SIZE, FONT_NAME, 9, c, centered=True)
@@ -167,7 +165,7 @@ def draw_cover_page(c):
     c.setFont(FONT_NAME, 12)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 30, "A Zoseco Journey to Virtue")
     c.setFont(FONT_NAME, 9)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 45, "Version 0.3")
+    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 45, "Version 0.32")
     
     discord_x = MARGIN
     donation_x = PAGE_WIDTH - MARGIN - QR_SIZE
@@ -175,8 +173,8 @@ def draw_cover_page(c):
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
                                 "Connect with the StagQuest community for support, updates, and to share your journey.",
                                 discord_x, qr_y)
-    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Support the Cause",
-                                "Donate to Zoseco’s mission to combat addiction and human trafficking—every contribution counts.",
+    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
+                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
                                 donation_x, qr_y)
     
     draw_contact_footer(c)
@@ -212,8 +210,8 @@ def draw_instructions_page(c):
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
                                 "Connect with the StagQuest community for support, updates, and to share your journey.",
                                 discord_x, qr_y)
-    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Support the Cause",
-                                "Donate to Zoseco’s mission to combat addiction and human trafficking—every contribution counts.",
+    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
+                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
                                 donation_x, qr_y)
     
     draw_contact_footer(c)
@@ -263,7 +261,9 @@ def draw_pouch_page(c):
         x = start_x + i * (POUCH_WIDTH + POUCH_SPACING)
         y = pouch_y - POUCH_HEIGHT
         c.setDash(2, 2)
-        c.rect(x, y, POUCH_WIDTH, POUCH_HEIGHT)
+        c.line(x, y, x, y + POUCH_HEIGHT)  # Left side
+        c.line(x, y, x + POUCH_WIDTH, y)  # Bottom
+        c.line(x + POUCH_WIDTH, y, x + POUCH_WIDTH, y + POUCH_HEIGHT)  # Right side
         c.setDash()
         label = ["Virtue Pouch", "Temptation Pouch"][i]
         c.setFont(FONT_NAME, 10)
@@ -290,8 +290,8 @@ def draw_pouch_page(c):
     draw_qr_with_label_and_desc(c, "https://discord.com/invite/zZhtw9WVNv", "Join Discord",
                                 "Connect with the StagQuest community for support, updates, and to share your journey.",
                                 discord_x, qr_y)
-    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Support the Cause",
-                                "Donate to Zoseco’s mission to combat addiction and human trafficking—every contribution counts.",
+    draw_qr_with_label_and_desc(c, "https://pay.zaprite.com/pl_4LxYdtCRsZ", "Help the Mission",
+                                "Join Zoseco’s fight to defeat addiction and human trafficking—every step helps.",
                                 donation_x, qr_y)
     
     draw_contact_footer(c, include_contribution=True)
