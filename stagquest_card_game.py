@@ -118,7 +118,7 @@ def create_pdf():
     c = canvas.Canvas("stagquest_card_game.pdf", pagesize=letter)
     c.setTitle("StagQuest: A Virtue-Building Card Game")
 
-    # Page 1: Cover
+    # Page 1: Cover with QR codes at bottom
     c.setFont(FONT_NAME, 20)
     c.setFillColor(royal_turquoise)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2, "StagQuest: A Card Game")
@@ -126,24 +126,28 @@ def create_pdf():
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 30, "A Zoseco Journey to Virtue")
     c.setFont(FONT_NAME, 9)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT/2 - 45, "Version 0.2")
-    c.setFont(FONT_NAME, 11)
-    c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH/2, 1.8 * inch, "Join the Quest – Get in Touch!")
-    c.setFont(FONT_NAME, 9)
-    c.setFillColorRGB(0, 0, 0)
-    contact_text = [
-        "Text/Voicemail: (219) 488-2689",
-        "Email: info@zoseco.com",
-        "Join our Discord: https://discord.com/invite/zZhtw9WVNv",
-        "Support the cause: https://pay.zaprite.com/pl_4LxYdtCRsZ"
-    ]
-    y_pos = 1.6 * inch
-    for line in contact_text:
-        c.drawCentredString(PAGE_WIDTH/2, y_pos, line)
-        y_pos -= 18
-    qr_file = create_qr_code("https://discord.com/invite/zZhtw9WVNv")
-    c.drawImage(qr_file, 5.5 * inch, 0.8 * inch, 1 * inch, 1 * inch)
-    os.remove(qr_file)
+    
+    # QR Codes for Discord and Donation at bottom
+    discord_url = "https://discord.com/invite/zZhtw9WVNv"
+    donation_url = "https://pay.zaprite.com/pl_4LxYdtCRsZ"
+    discord_qr = create_qr_code(discord_url)
+    donation_qr = create_qr_code(donation_url)
+    
+    qr_size = 1.5 * inch
+    discord_x = (PAGE_WIDTH / 2) - qr_size - 0.5 * inch
+    donation_x = (PAGE_WIDTH / 2) + 0.5 * inch
+    qr_y = 1 * inch  # Positioned at bottom
+    
+    c.drawImage(discord_qr, discord_x, qr_y, qr_size, qr_size)
+    c.drawImage(donation_qr, donation_x, qr_y, qr_size, qr_size)
+    
+    # Labels above QR codes
+    c.setFont(FONT_NAME, 10)
+    c.drawCentredString(discord_x + qr_size / 2, qr_y + qr_size + 0.2 * inch, "Join Discord")
+    c.drawCentredString(donation_x + qr_size / 2, qr_y + qr_size + 0.2 * inch, "Support the Cause")
+    
+    os.remove(discord_qr)
+    os.remove(donation_qr)
     c.showPage()
 
     # Page 2: Instructions
@@ -161,7 +165,7 @@ def create_pdf():
         "4. Temptation Test: On days 3, 6, and 9, draw 1 Temptation Card. Resist it (say 'Y') or lose a day’s progress (say 'N').",
         "5. Track Your Quest: For each successful day (tasks completed and Temptation resisted), place a Virtue Card in the Virtue Pouch. If you fail, place a Temptation Card in the Temptation Pouch.",
         "6. Win: After 9 days, if your Virtue Pouch has 9 cards and your Temptation Pouch has 0, increase Family Strength by 1 and claim your Virtuous Stag badge!",
-        "Tips: Personalize your Stag Pouch or cards with drawings (e.g., antlers). Join our Discord to get an NFT when StagQuest launches online, and suggest new cards—share ideas and win points if approved! Support the cause at https://pay.zaprite.com/pl_4LxYdtCRsZ."
+        "Tips: Personalize your Stag Pouch or cards with drawings (e.g., antlers). Join our Discord or support the cause via the QR codes on the cover!"
     ]
     y_pos = PAGE_HEIGHT - 1.5 * inch
     for line in instructions:
@@ -203,20 +207,30 @@ def create_pdf():
     c.setFillColorRGB(0, 0, 0)
     c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 1.4 * inch, "Two Pouches: Virtue and Temptation")
     c.setFont(FONT_NAME, 9)
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 1.6 * inch, "Cut and sew dashed lines, leaving top open")
+    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 1.6 * inch, "Cut along the dashed lines and sew/glue the sides and bottom to create two pouches. Leave the top open to insert a card each day you succeed or fail.")
     
-    # Draw two large pouches
+    # Centered and raised pouches
+    pouch_width = 3.5 * inch
+    pouch_height = 4 * inch
+    pouch_spacing = 0.5 * inch
+    total_pouch_width = 2 * pouch_width + pouch_spacing
+    start_x = (PAGE_WIDTH - total_pouch_width) / 2
+    start_y = PAGE_HEIGHT / 2  # Raised to middle of page
+    
     for i in range(2):
-        x = 1.5 * inch + i * (3.5 * inch + 0.5 * inch)
-        y = PAGE_HEIGHT - 3 * inch
+        x = start_x + i * (pouch_width + pouch_spacing)
+        y = start_y
         c.setDash(2, 2)
-        c.rect(x, y, 3.5 * inch, 4 * inch)  # Larger pouch for multiple cards
+        c.rect(x, y, pouch_width, pouch_height)
         c.setDash()
-        c.drawCentredString(x + 1.75 * inch, y + 4.25 * inch, ["Virtue Pouch", "Temptation Pouch"][i])
-    c.drawCentredString(PAGE_WIDTH/2, PAGE_HEIGHT - 5.5 * inch, "Family Strength: ___")
-
+        c.drawCentredString(x + pouch_width / 2, y + pouch_height + 0.2 * inch, ["Virtue Pouch", "Temptation Pouch"][i])
+    
+    c.drawCentredString(PAGE_WIDTH/2, start_y - 0.5 * inch, "Family Strength: ___")
+    
+    # Badge
     badge_width, badge_height = 3.5 * inch, 1.5 * inch
-    badge_x, badge_y = (PAGE_WIDTH - badge_width) / 2, 2 * inch
+    badge_x = (PAGE_WIDTH - badge_width) / 2
+    badge_y = start_y - badge_height - 1 * inch
     c.rect(badge_x, badge_y, badge_width, badge_height)
     c.setFont(FONT_NAME, 14)
     c.setFillColor(royal_turquoise)
