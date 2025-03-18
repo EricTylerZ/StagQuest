@@ -244,7 +244,7 @@ def draw_pouch_page(c):
     """Draw the pouch page with Virtue/Temptation pouches and badge."""
     c.setFont(FONT_NAME, 12)
     c.setFillColor(royal_turquoise)
-    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, "Stag Pouch")
+    c.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, "Stag Quest Pouch")
     
     c.setFont(FONT_NAME, 11)
     c.setFillColor(royal_turquoise)
@@ -308,8 +308,16 @@ def draw_pouch_page(c):
     draw_common_footer(c)
 
 def create_pdf():
-    """Generate the full Stag Quest PDF."""
+    """Generate the full Stag Quest PDF with metadata."""
     c = canvas.Canvas("stagquest_card_game.pdf", pagesize=letter)
+    # Set PDF metadata
+    c.setTitle("Stag Quest: A Virtue-Building Card Game from Zoseco")
+    c.setAuthor("Zoseco")
+    c.setSubject("A 9-day card game to build virtue and resist addiction")
+    c.setCreator("Zoseco Team")
+    c.setKeywords("Stag Quest, card game, virtue, addiction, trafficking, Zoseco")
+    
+    # Generate pages
     draw_cover_page(c)
     c.showPage()
     draw_instructions_page(c)
