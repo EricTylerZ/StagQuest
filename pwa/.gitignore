@@ -1,0 +1,7 @@
+# Override parent .gitignore — we need package.json tracked for Capacitor
+!package.json
+!capacitor.config.json
+node_modules/
+package-lock.json
+ios/
+android/

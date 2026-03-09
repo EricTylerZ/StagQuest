@@ -1,0 +1,15 @@
+{
+  "appId": "com.zoseco.stagquest",
+  "appName": "StagQuest",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#f5f0e8"
+  },
+  "android": {
+    "backgroundColor": "#f5f0e8"
+  }
+}

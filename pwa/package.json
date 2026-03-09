@@ -1,0 +1,24 @@
+{
+  "name": "stagquest-pwa",
+  "version": "1.0.0",
+  "description": "Fight Human Trafficking Through Prayer and Discipline — a 9-day novena tracker.",
+  "main": "game.js",
+  "scripts": {
+    "cap:init-ios": "npx cap add ios",
+    "cap:init-android": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:open-ios": "npx cap open ios",
+    "cap:open-android": "npx cap open android",
+    "cap:run-ios": "npx cap run ios",
+    "cap:run-android": "npx cap run android"
+  },
+  "keywords": [],
+  "author": "Zoseco",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0"
+  }
+}
