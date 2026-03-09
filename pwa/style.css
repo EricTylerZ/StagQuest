@@ -1,0 +1,311 @@
+/* StagQuest PWA - Mobile-First Styles */
+/* Royal Turquoise theme (#00918b) with darker accents for the fight */
+
+:root {
+  --primary: #00918b;
+  --primary-dark: #006e69;
+  --primary-light: #b2dfdb;
+  --accent: #8b6914;
+  --danger: #8b0000;
+  --text: #1a1a2e;
+  --text-light: #555;
+  --bg: #f5f0e8;
+  --card-bg: #fff;
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.screen { display: none; min-height: 100vh; padding: 1rem; padding-top: env(safe-area-inset-top); }
+.screen.active { display: flex; flex-direction: column; }
+
+/* Title */
+.title-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+h1 { font-size: 2.5rem; color: var(--primary); letter-spacing: 2px; }
+.subtitle { font-size: 1rem; color: var(--text-light); }
+.tagline { font-size: 0.9rem; color: var(--accent); font-weight: 600; }
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  max-width: 400px;
+  transition: transform 0.1s;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-secondary { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+
+.btn-answer {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 2px solid var(--primary-light);
+  text-align: left;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.btn-answer:active { background: var(--primary-light); }
+
+/* Header */
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid var(--primary-light);
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Rules */
+.rules-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.rules-content section { margin-bottom: 1.25rem; }
+.rules-content h3 { color: var(--primary); margin-bottom: 0.3rem; }
+.rules-content p, .rules-content li { line-height: 1.5; color: var(--text-light); }
+.rules-content ul { padding-left: 1.25rem; }
+
+/* Game header */
+.game-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid var(--primary-light);
+  margin-bottom: 1rem;
+}
+
+.game-status {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.status-day { color: var(--primary); }
+.status-prayers { color: var(--text); }
+.status-merit { color: #e67e22; }
+
+/* Prayer area */
+.prayer-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.current-hour {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Hours grid */
+.hours-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.hour-btn {
+  background: var(--card-bg);
+  border: 2px solid var(--primary-light);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s;
+  text-align: left;
+  width: 100%;
+}
+
+.hour-btn:active { transform: scale(0.98); }
+.hour-btn.current { border-color: var(--primary); border-width: 3px; }
+.hour-btn.done { background: #e8f5e9; border-color: #81c784; opacity: 0.8; }
+.hour-btn.done:disabled { cursor: default; }
+
+.hour-name { font-weight: 700; color: var(--primary); font-size: 1rem; min-width: 80px; }
+.hour-label { color: var(--text-light); font-size: 0.85rem; flex: 1; }
+.hour-check { color: #27ae60; font-size: 1.2rem; }
+
+/* Card overlay */
+.card-overlay {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prayer-box {
+  background: #f0f4f8;
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.prayer-box h3 { color: var(--primary); margin-bottom: 0.5rem; }
+
+.prayer-text {
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.virtue-card {
+  background: var(--card-bg);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.virtue-card h4 { color: var(--accent); margin-bottom: 0.5rem; }
+.virtue-card p { line-height: 1.5; margin-bottom: 0.25rem; }
+.fun-fact { font-size: 0.85rem; color: var(--text-light); font-style: italic; }
+
+.question-box { width: 100%; }
+.question-text { font-weight: 600; margin-bottom: 0.75rem; line-height: 1.4; }
+.answers { display: flex; flex-direction: column; }
+
+/* Day complete */
+.day-complete {
+  text-align: center;
+  padding: 2rem 1rem;
+  max-width: 400px;
+}
+
+.day-complete h3 { color: var(--primary); font-size: 1.5rem; margin-bottom: 0.5rem; }
+.next-day { color: var(--text-light); margin: 0.5rem 0; }
+
+/* Complete screen */
+.complete-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.complete-content h2 { color: var(--primary); font-size: 2rem; }
+.complete-subtitle { color: var(--text-light); }
+
+.badge { padding: 1rem; width: 100%; max-width: 350px; }
+
+.badge-border {
+  border: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.badge-border h3 { color: var(--accent); font-size: 1.4rem; margin-bottom: 0.5rem; }
+.badge-border p { color: var(--text-light); margin: 0.25rem 0; }
+
+.novena-prayer {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  max-width: 400px;
+  text-align: left;
+}
+
+.novena-prayer h4 { color: var(--primary); margin-bottom: 0.5rem; }
+.novena-prayer p { line-height: 1.7; color: var(--text-light); font-size: 0.9rem; }
+
+/* Sentinel */
+.sentinel-login {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--primary-light);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.sentinel-offline { color: var(--text-light); font-size: 0.85rem; margin-bottom: 0.5rem; }
+.sentinel-online { color: var(--primary); font-size: 0.85rem; margin-bottom: 0.5rem; font-weight: 600; }
+
+.sentinel-login input {
+  padding: 0.5rem;
+  border: 1px solid var(--primary-light);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 60%;
+  margin-right: 0.25rem;
+}
+
+.sentinel-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.sentinel-toggle { margin-top: 0.5rem; }
+.sentinel-toggle a { color: var(--primary); font-size: 0.8rem; }
+
+.hidden { display: none !important; }
+
+.footer {
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+@media (min-width: 600px) {
+  h1 { font-size: 3rem; }
+}

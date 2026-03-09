@@ -1,0 +1,10 @@
+{
+  "name": "StagQuest",
+  "short_name": "StagQuest",
+  "description": "Fight Human Trafficking Through Prayer and Discipline",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#00918b",
+  "icons": []
+}

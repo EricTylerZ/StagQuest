@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#00918b">
+  <title>StagQuest</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Title Screen -->
+  <div id="title-screen" class="screen active">
+    <div class="title-content">
+      <h1>StagQuest</h1>
+      <p class="subtitle">Fight Human Trafficking, One Choice at a Time</p>
+      <p class="tagline">A 9-Day Novena of Prayer and Discipline</p>
+
+      <button id="start-btn" class="btn btn-primary">Begin Novena</button>
+      <button id="continue-btn" class="btn btn-secondary hidden">Continue Novena</button>
+      <button id="rules-btn" class="btn btn-secondary">How It Works</button>
+
+      <!-- Sentinel Ops Login -->
+      <div class="sentinel-login">
+        <div id="sentinel-status" class="sentinel-offline">Playing offline</div>
+        <div id="sentinel-login-form">
+          <input type="text" id="sentinel-role-id" placeholder="Role ID" autocomplete="off">
+          <button id="sentinel-login-btn" class="sentinel-btn">Login</button>
+        </div>
+        <div id="sentinel-register-form" class="hidden">
+          <input type="text" id="sentinel-reg-name" placeholder="Your name" autocomplete="off">
+          <button id="sentinel-register-btn" class="sentinel-btn">Register</button>
+        </div>
+        <div class="sentinel-toggle">
+          <a href="#" id="sentinel-toggle-register">New? Register for EZ Merit Points</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer">zoseco.com | 40M enslaved. Your virtue fights back.</div>
+  </div>
+
+  <!-- Rules Screen -->
+  <div id="rules-screen" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" data-target="title-screen">&larr;</button>
+      <h2>How It Works</h2>
+    </div>
+    <div class="rules-content">
+      <section>
+        <h3>The Mission</h3>
+        <p>StagQuest is a 9-day novena that turns your daily discipline into a strike against human trafficking. Every "no" to temptation weakens the $150B exploitation industry.</p>
+      </section>
+      <section>
+        <h3>Daily Prayers (7 per day)</h3>
+        <p>Each day follows the Liturgy of the Hours. Tap each hour to pray, receive a virtue card, and answer a teaching question:</p>
+        <ul>
+          <li><strong>Lauds</strong> &ndash; Morning Prayer (6am)</li>
+          <li><strong>Prime</strong> &ndash; Early Morning (7am)</li>
+          <li><strong>Terce</strong> &ndash; Mid-Morning (9am)</li>
+          <li><strong>Sext</strong> &ndash; Midday (12pm)</li>
+          <li><strong>None</strong> &ndash; Afternoon (3pm)</li>
+          <li><strong>Vespers</strong> &ndash; Evening (5pm)</li>
+          <li><strong>Compline</strong> &ndash; Night (9pm)</li>
+        </ul>
+      </section>
+      <section>
+        <h3>EZ Merit Points</h3>
+        <p>Each prayer earns 1 merit point. Correct answers earn 1 more. Complete all 9 days for a 9-point bonus. Points count across all Zoseco games.</p>
+      </section>
+      <section>
+        <h3>Why It Matters</h3>
+        <p>40 million people are trafficked worldwide. 76% are under 18. 42% of family trafficking involves pornography. Your personal discipline is not just about you &mdash; it strikes at the demand that fuels this evil.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <button class="back-btn" data-target="title-screen">&larr;</button>
+      <div id="game-status" class="game-status"></div>
+    </div>
+    <div id="prayer-area" class="prayer-area"></div>
+  </div>
+
+  <!-- Novena Complete Screen -->
+  <div id="complete-screen" class="screen">
+    <div id="complete-content" class="complete-content"></div>
+  </div>
+
+  <script src="teaching-module.js"></script>
+  <script src="sentinel-api.js"></script>
+  <script src="stagquest-data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
